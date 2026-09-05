@@ -1,0 +1,2067 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+
+/*
+  ============================================================
+  NOVA — MAIN INTERFACE
+  ============================================================
+
+  Hauptprinzip:
+  - NOVA startet im Voice-/Core-Modus
+  - Keine Chat-Eingabe direkt beim Start
+  - Core ist das Zentrum der Oberfläche
+  - Schreiben wird erst über den Button geöffnet
+  - Bestehende /api/chat API wird verwendet
+  - Keine zusätzlichen externen Libraries notwendig
+  - Canvas-Animation läuft kontrolliert
+  - Voice nutzt die Browser Speech APIs
+  - TTS versucht automatisch eine britische Stimme zu verwenden
+  ============================================================
+*/
+
+export default function Nova() {
+  const canvasRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const animationRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  const [coreState, setCoreState] = useState('idle');
+
+  const [isWriting, setIsWriting] = useState(false);
+  const [input, setInput] = useState('');
+  const [transcript, setTranscript] = useState('');
+
+  const [messages, setMessages] = useState([]);
+
+  const [isOnline, setIsOnline] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+  const [error, setError] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
+
+  const [voices, setVoices] = useState([]);
+
+  /*
+    ============================================================
+    ONLINE / OFFLINE
+    ============================================================
+  */
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setError('');
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setCoreState('offline');
+      setError('Keine Internetverbindung verfügbar.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    setIsOnline(navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  /*
+    ============================================================
+    BROWSER VOICES
+    ============================================================
+  */
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      return;
+    }
+
+    const loadVoices = () => {
+      const available = window.speechSynthesis.getVoices();
+      setVoices(available);
+    };
+
+    loadVoices();
+
+    window.speechSynthesis.addEventListener(
+      'voiceschanged',
+      loadVoices
+    );
+
+    return () => {
+      window.speechSynthesis.removeEventListener(
+        'voiceschanged',
+        loadVoices
+      );
+    };
+  }, []);
+
+  /*
+    ============================================================
+    NOVA CORE CANVAS
+    ============================================================
+  */
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return;
+    }
+
+    let rotation = 0;
+    let pulse = 0;
+
+    const render = () => {
+      const dpr = window.devicePixelRatio || 1;
+
+      const rect = canvas.getBoundingClientRect();
+
+      const width = rect.width;
+      const height = rect.height;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+
+      ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+      );
+
+      ctx.clearRect(0, 0, width, height);
+
+      const cx = width / 2;
+      const cy = height / 2;
+
+      rotation += 0.006;
+
+      let speed = 0.006;
+      let pulseAmount = 1;
+
+      if (coreState === 'listening') {
+        speed = 0.018;
+        pulseAmount = 1.35;
+      }
+
+      if (coreState === 'thinking') {
+        speed = 0.025;
+        pulseAmount = 1.15;
+      }
+
+      if (coreState === 'speaking') {
+        speed = 0.012;
+        pulseAmount = 1.55;
+      }
+
+      if (coreState === 'success') {
+        speed = 0.015;
+        pulseAmount = 1.2;
+      }
+
+      if (coreState === 'error') {
+        speed = 0.02;
+        pulseAmount = 1.3;
+      }
+
+      if (coreState === 'offline') {
+        speed = 0.002;
+        pulseAmount = 0.8;
+      }
+
+      rotation += speed;
+      pulse += 0.045;
+
+      /*
+        --------------------------------------------------------
+        STATE COLORS
+        --------------------------------------------------------
+      */
+
+      let primary = '#4deaff';
+      let secondary = '#147cff';
+
+      if (coreState === 'listening') {
+        primary = '#6cf6ff';
+        secondary = '#00b7ff';
+      }
+
+      if (coreState === 'thinking') {
+        primary = '#8b9cff';
+        secondary = '#4169ff';
+      }
+
+      if (coreState === 'speaking') {
+        primary = '#66f7ff';
+        secondary = '#168cff';
+      }
+
+      if (coreState === 'success') {
+        primary = '#7dfff0';
+        secondary = '#00c9a7';
+      }
+
+      if (coreState === 'error') {
+        primary = '#ff647c';
+        secondary = '#ff1f52';
+      }
+
+      if (coreState === 'offline') {
+        primary = '#667080';
+        secondary = '#303846';
+      }
+
+      /*
+        --------------------------------------------------------
+        OUTER ATMOSPHERE
+        --------------------------------------------------------
+      */
+
+      const glowRadius =
+        95 +
+        Math.sin(pulse) *
+          10 *
+          pulseAmount;
+
+      const atmosphere =
+        ctx.createRadialGradient(
+          cx,
+          cy,
+          10,
+          cx,
+          cy,
+          glowRadius * 1.8
+        );
+
+      atmosphere.addColorStop(
+        0,
+        `${primary}20`
+      );
+
+      atmosphere.addColorStop(
+        0.45,
+        `${primary}09`
+      );
+
+      atmosphere.addColorStop(
+        1,
+        'transparent'
+      );
+
+      ctx.fillStyle = atmosphere;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        cx,
+        cy,
+        glowRadius * 1.8,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+      /*
+        --------------------------------------------------------
+        OUTER RINGS
+        --------------------------------------------------------
+      */
+
+      ctx.save();
+
+      ctx.translate(cx, cy);
+      ctx.rotate(rotation);
+
+      for (let i = 0; i < 3; i++) {
+        const radius =
+          115 + i * 12;
+
+        ctx.beginPath();
+
+        ctx.arc(
+          0,
+          0,
+          radius,
+          i * 0.7,
+          Math.PI * 1.4 + i * 0.7
+        );
+
+        ctx.strokeStyle =
+          i === 0
+            ? `${primary}bb`
+            : `${secondary}65`;
+
+        ctx.lineWidth =
+          i === 0 ? 2 : 1;
+
+        ctx.shadowBlur =
+          i === 0 ? 16 : 8;
+
+        ctx.shadowColor = primary;
+
+        ctx.stroke();
+      }
+
+      ctx.restore();
+
+      /*
+        --------------------------------------------------------
+        INNER ROTATING RING
+        --------------------------------------------------------
+      */
+
+      ctx.save();
+
+      ctx.translate(cx, cy);
+      ctx.rotate(-rotation * 1.7);
+
+      ctx.beginPath();
+
+      ctx.arc(
+        0,
+        0,
+        84,
+        0,
+        Math.PI * 1.65
+      );
+
+      ctx.strokeStyle = primary;
+      ctx.lineWidth = 2;
+
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = primary;
+
+      ctx.stroke();
+
+      ctx.restore();
+
+      /*
+        --------------------------------------------------------
+        CORE
+        --------------------------------------------------------
+      */
+
+      const coreSize =
+        32 +
+        Math.sin(pulse) *
+          5 *
+          pulseAmount;
+
+      const coreGradient =
+        ctx.createRadialGradient(
+          cx - 8,
+          cy - 8,
+          3,
+          cx,
+          cy,
+          coreSize * 1.6
+        );
+
+      coreGradient.addColorStop(
+        0,
+        '#ffffff'
+      );
+
+      coreGradient.addColorStop(
+        0.2,
+        primary
+      );
+
+      coreGradient.addColorStop(
+        0.55,
+        `${primary}bb`
+      );
+
+      coreGradient.addColorStop(
+        1,
+        `${secondary}00`
+      );
+
+      ctx.fillStyle = coreGradient;
+
+      ctx.shadowBlur =
+        30 +
+        Math.sin(pulse) * 8;
+
+      ctx.shadowColor = primary;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        cx,
+        cy,
+        coreSize,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+      /*
+        --------------------------------------------------------
+        CORE PARTICLES
+        --------------------------------------------------------
+      */
+
+      ctx.shadowBlur = 0;
+
+      for (let i = 0; i < 18; i++) {
+        const angle =
+          rotation * (i % 2 === 0 ? 1 : -1) +
+          i * 0.9;
+
+        const radius =
+          55 +
+          Math.sin(
+            pulse * 1.5 + i
+          ) *
+            8;
+
+        const x =
+          cx +
+          Math.cos(angle) *
+            radius;
+
+        const y =
+          cy +
+          Math.sin(angle) *
+            radius;
+
+        ctx.fillStyle =
+          `${primary}${i % 2 === 0 ? 'aa' : '55'}`;
+
+        ctx.beginPath();
+
+        ctx.arc(
+          x,
+          y,
+          i % 3 === 0 ? 2 : 1,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fill();
+      }
+
+      animationRef.current =
+        requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(
+          animationRef.current
+        );
+      }
+    };
+  }, [coreState]);
+
+  /*
+    ============================================================
+    CLEANUP VOICE
+    ============================================================
+  */
+
+  useEffect(() => {
+    return () => {
+      if (
+        recognitionRef.current
+      ) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // Recognition was already stopped.
+        }
+      }
+
+      if (
+        typeof window !== 'undefined' &&
+        window.speechSynthesis
+      ) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  /*
+    ============================================================
+    AUTO SCROLL
+    ============================================================
+  */
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth'
+    });
+  }, [messages]);
+
+  /*
+    ============================================================
+    FIND BRITISH VOICE
+    ============================================================
+  */
+
+  const findBritishVoice = () => {
+    if (!voices.length) {
+      return null;
+    }
+
+    const british =
+      voices.find((voice) => {
+        const lang =
+          voice.lang?.toLowerCase() || '';
+
+        const name =
+          voice.name?.toLowerCase() || '';
+
+        return (
+          lang === 'en-gb' ||
+          lang.startsWith('en-gb') ||
+          name.includes('british') ||
+          name.includes('uk')
+        );
+      });
+
+    return british || null;
+  };
+
+  /*
+    ============================================================
+    TEXT TO SPEECH
+    ============================================================
+  */
+
+  const speak = (text) => {
+    if (!voiceEnabled) {
+      return;
+    }
+
+    if (
+      typeof window === 'undefined' ||
+      !window.speechSynthesis
+    ) {
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utterance =
+      new SpeechSynthesisUtterance(text);
+
+    const britishVoice =
+      findBritishVoice();
+
+    if (britishVoice) {
+      utterance.voice =
+        britishVoice;
+    }
+
+    /*
+      Für deutsche Antworten wird Deutsch gesprochen.
+      Die Stimme wird trotzdem bevorzugt aus dem
+      verfügbaren britischen Sprachset gewählt, falls
+      das Gerät diese bereitstellt.
+    */
+
+    utterance.lang =
+      britishVoice?.lang ||
+      'de-DE';
+
+    utterance.rate = 0.93;
+    utterance.pitch = 0.9;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setCoreState('speaking');
+    };
+
+    utterance.onend = () => {
+      setCoreState('idle');
+    };
+
+    utterance.onerror = () => {
+      setCoreState('idle');
+    };
+
+    window.speechSynthesis.speak(
+      utterance
+    );
+  };
+
+  /*
+    ============================================================
+    SEND TO API
+    ============================================================
+  */
+
+  const askNova = async (userText) => {
+    const cleanText =
+      userText.trim();
+
+    if (!cleanText) {
+      return;
+    }
+
+    if (!navigator.onLine) {
+      setCoreState('offline');
+
+      setError(
+        'Ich kann gerade keine Verbindung zu meinem KI-Backend herstellen.'
+      );
+
+      return;
+    }
+
+    setError('');
+    setCoreState('thinking');
+
+    const userMessage = {
+      role: 'user',
+      content: cleanText
+    };
+
+    setMessages((previous) => [
+      ...previous,
+      userMessage
+    ]);
+
+    try {
+      /*
+        Wir verwenden deine bestehende API.
+      */
+
+      const response =
+        await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+          body: JSON.stringify({
+            messages: [
+              ...messages,
+              userMessage
+            ]
+          })
+        });
+
+      if (!response.ok) {
+        throw new Error(
+          `API_ERROR_${response.status}`
+        );
+      }
+
+      const data =
+        await response.json();
+
+      /*
+        Unterstützt das bisherige Format:
+        data.choices[0].message.content
+      */
+
+      const reply =
+        data?.choices?.[0]?.message?.content ||
+        data?.message?.content ||
+        data?.reply ||
+        data?.response;
+
+      if (!reply) {
+        throw new Error(
+          'EMPTY_RESPONSE'
+        );
+      }
+
+      const assistantMessage = {
+        role: 'assistant',
+        content: reply
+      };
+
+      setMessages((previous) => [
+        ...previous,
+        assistantMessage
+      ]);
+
+      setCoreState('success');
+
+      setTimeout(() => {
+        setCoreState('idle');
+      }, 900);
+
+      if (voiceEnabled) {
+        speak(reply);
+      }
+    } catch (err) {
+      console.error(
+        'NOVA API ERROR:',
+        err
+      );
+
+      setCoreState('error');
+
+      setError(
+        'Ich kann gerade keine Verbindung zu meinem KI-Backend herstellen.'
+      );
+
+      setTimeout(() => {
+        setCoreState('idle');
+      }, 1800);
+    }
+  };
+
+  /*
+    ============================================================
+    MICROPHONE
+    ============================================================
+  */
+
+  const startListening = () => {
+    if (
+      typeof window === 'undefined'
+    ) {
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setError(
+        'Spracherkennung wird von diesem Browser nicht unterstützt.'
+      );
+
+      setCoreState('error');
+
+      setTimeout(() => {
+        setCoreState('idle');
+      }, 1800);
+
+      return;
+    }
+
+    if (
+      recognitionRef.current
+    ) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Already stopped.
+      }
+    }
+
+    const recognition =
+      new SpeechRecognition();
+
+    recognition.lang =
+      'de-DE';
+
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognitionRef.current =
+      recognition;
+
+    setTranscript('');
+    setError('');
+    setCoreState('listening');
+
+    recognition.onresult = (
+      event
+    ) => {
+      let finalText = '';
+      let temporaryText = '';
+
+      for (
+        let i = event.resultIndex;
+        i < event.results.length;
+        i++
+      ) {
+        const result =
+          event.results[i];
+
+        if (result.isFinal) {
+          finalText +=
+            result[0].transcript;
+        } else {
+          temporaryText +=
+            result[0].transcript;
+        }
+      }
+
+      const current =
+        finalText ||
+        temporaryText;
+
+      setTranscript(current);
+
+      if (finalText.trim()) {
+        setCoreState('thinking');
+
+        askNova(
+          finalText.trim()
+        );
+      }
+    };
+
+    recognition.onerror = (
+      event
+    ) => {
+      console.error(
+        'NOVA SPEECH ERROR:',
+        event.error
+      );
+
+      if (
+        event.error ===
+        'not-allowed'
+      ) {
+        setError(
+          'Der Mikrofonzugriff wurde nicht erlaubt.'
+        );
+      } else if (
+        event.error ===
+        'no-speech'
+      ) {
+        setError(
+          'Ich habe nichts gehört.'
+        );
+      } else {
+        setError(
+          'Die Spracherkennung konnte nicht gestartet werden.'
+        );
+      }
+
+      setCoreState('error');
+
+      setTimeout(() => {
+        setCoreState('idle');
+      }, 1600);
+    };
+
+    recognition.onend = () => {
+      recognitionRef.current =
+        null;
+
+      if (
+        coreState ===
+        'listening'
+      ) {
+        setCoreState('idle');
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (err) {
+      console.error(err);
+
+      setCoreState('error');
+
+      setError(
+        'Das Mikrofon konnte nicht gestartet werden.'
+      );
+
+      setTimeout(() => {
+        setCoreState('idle');
+      }, 1600);
+    }
+  };
+
+  /*
+    ============================================================
+    STOP LISTENING
+    ============================================================
+  */
+
+  const stopListening = () => {
+    if (
+      recognitionRef.current
+    ) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Already stopped.
+      }
+
+      recognitionRef.current =
+        null;
+    }
+
+    if (
+      coreState ===
+      'listening'
+    ) {
+      setCoreState('idle');
+    }
+  };
+
+  /*
+    ============================================================
+    CORE CLICK
+    ============================================================
+  */
+
+  const handleCoreClick = () => {
+    if (
+      coreState ===
+      'listening'
+    ) {
+      stopListening();
+      return;
+    }
+
+    if (
+      coreState ===
+      'thinking' ||
+      coreState ===
+      'speaking'
+    ) {
+      return;
+    }
+
+    setIsWriting(false);
+    startListening();
+  };
+
+  /*
+    ============================================================
+    TEXT SUBMIT
+    ============================================================
+  */
+
+  const handleSubmit = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    const text =
+      input.trim();
+
+    if (!text) {
+      return;
+    }
+
+    setInput('');
+    setTranscript(text);
+
+    await askNova(text);
+  };
+
+  /*
+    ============================================================
+    NEW CHAT
+    ============================================================
+  */
+
+  const newChat = () => {
+    setMessages([]);
+    setTranscript('');
+    setError('');
+    setInput('');
+    setIsWriting(false);
+    setShowMenu(false);
+    setCoreState('idle');
+  };
+
+  /*
+    ============================================================
+    STATUS TEXT
+    ============================================================
+  */
+
+  const getStatusText = () => {
+    switch (coreState) {
+      case 'listening':
+        return 'ICH HÖRE ZU';
+
+      case 'thinking':
+        return 'NOVA DENKT';
+
+      case 'speaking':
+        return 'NOVA SPRICHT';
+
+      case 'success':
+        return 'ERLEDIGT';
+
+      case 'error':
+        return 'VERBINDUNGSFEHLER';
+
+      case 'offline':
+        return 'OFFLINE';
+
+      default:
+        return 'NOVA ONLINE';
+    }
+  };
+
+  /*
+    ============================================================
+    RENDER
+    ============================================================
+  */
+
+  return (
+    <>
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
+
+        html,
+        body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          min-height: 100%;
+          background: #02050a;
+          color: white;
+          font-family:
+            Inter,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
+        }
+
+        body {
+          overflow-x: hidden;
+        }
+
+        button,
+        input {
+          font: inherit;
+        }
+
+        button {
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        ::selection {
+          background: rgba(
+            77,
+            234,
+            255,
+            0.25
+          );
+        }
+
+        .nova-app {
+          position: relative;
+          min-height: 100vh;
+          min-height: 100dvh;
+          overflow: hidden;
+          background:
+            radial-gradient(
+              circle at 50% 42%,
+              rgba(
+                0,
+                140,
+                190,
+                0.08
+              ),
+              transparent 35%
+            ),
+            linear-gradient(
+              180deg,
+              #03070d 0%,
+              #010307 100%
+            );
+        }
+
+        .nova-grid {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          opacity: 0.12;
+          background-image:
+            linear-gradient(
+              rgba(
+                77,
+                234,
+                255,
+                0.08
+              )
+              1px,
+              transparent 1px
+            ),
+            linear-gradient(
+              90deg,
+              rgba(
+                77,
+                234,
+                255,
+                0.08
+              )
+              1px,
+              transparent 1px
+            );
+          background-size:
+            70px 70px;
+          mask-image:
+            linear-gradient(
+              to bottom,
+              transparent,
+              black 20%,
+              black 80%,
+              transparent
+            );
+        }
+
+        .nova-vignette {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(
+              circle,
+              transparent 35%,
+              rgba(
+                0,
+                0,
+                0,
+                0.58
+              )
+              100%
+            );
+        }
+
+        .nova-topbar {
+          position: relative;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          padding:
+            max(
+              20px,
+              env(
+                safe-area-inset-top
+              )
+            )
+            24px
+            12px;
+        }
+
+        .nova-brand {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .nova-brand-mark {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: #4deaff;
+          box-shadow:
+            0 0 8px #4deaff,
+            0 0 22px
+              rgba(
+                77,
+                234,
+                255,
+                0.6
+              );
+        }
+
+        .nova-brand-text {
+          letter-spacing: 0.28em;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .nova-status {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: rgba(
+            255,
+            255,
+            255,
+            0.55
+          );
+          font-size: 10px;
+          letter-spacing: 0.16em;
+        }
+
+        .nova-status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #4deaff;
+          box-shadow:
+            0 0 8px #4deaff;
+        }
+
+        .nova-menu-button {
+          position: relative;
+          width: 42px;
+          height: 42px;
+          border: 1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.1
+            );
+          border-radius: 50%;
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.035
+            );
+          color: white;
+          cursor: pointer;
+        }
+
+        .nova-menu-button:hover {
+          border-color:
+            rgba(
+              77,
+              234,
+              255,
+              0.4
+            );
+        }
+
+        .nova-main {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: calc(
+            100vh - 80px
+          );
+          min-height: calc(
+            100dvh - 80px
+          );
+          padding:
+            10px 20px
+            max(
+              30px,
+              env(
+                safe-area-inset-bottom
+              )
+            );
+        }
+
+        .nova-core-area {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .nova-core-canvas {
+          display: block;
+          width: min(
+            78vw,
+            360px
+          );
+          height: min(
+            78vw,
+            360px
+          );
+          max-width: 360px;
+          max-height: 360px;
+          cursor: pointer;
+          touch-action: manipulation;
+        }
+
+        .nova-core-label {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform:
+            translate(
+              -50%,
+              -50%
+            );
+          pointer-events: none;
+          text-align: center;
+        }
+
+        .nova-core-name {
+          font-size: 10px;
+          letter-spacing: 0.42em;
+          margin-left: 0.42em;
+          color: rgba(
+            255,
+            255,
+            255,
+            0.72
+          );
+        }
+
+        .nova-status-label {
+          margin-top: 2px;
+          color: #4deaff;
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.24em;
+        }
+
+        .nova-transcript {
+          min-height: 28px;
+          margin-top: 18px;
+          max-width: 600px;
+          padding: 0 20px;
+          color: rgba(
+            255,
+            255,
+            255,
+            0.62
+          );
+          text-align: center;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .nova-transcript:empty {
+          display: none;
+        }
+
+        .nova-instruction {
+          margin-top: 8px;
+          color: rgba(
+            255,
+            255,
+            255,
+            0.35
+          );
+          font-size: 11px;
+          letter-spacing: 0.12em;
+          text-align: center;
+        }
+
+        .nova-actions {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 24px;
+        }
+
+        .nova-action {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          min-height: 48px;
+          padding: 0 20px;
+          border: 1px solid
+            rgba(
+              77,
+              234,
+              255,
+              0.22
+            );
+          border-radius: 999px;
+          background:
+            rgba(
+              77,
+              234,
+              255,
+              0.045
+            );
+          color: #cfffff;
+          cursor: pointer;
+          transition:
+            180ms ease;
+        }
+
+        .nova-action:hover {
+          transform: translateY(-1px);
+          border-color:
+            rgba(
+              77,
+              234,
+              255,
+              0.55
+            );
+          background:
+            rgba(
+              77,
+              234,
+              255,
+              0.09
+            );
+          box-shadow:
+            0 0 30px
+              rgba(
+                77,
+                234,
+                255,
+                0.08
+              );
+        }
+
+        .nova-action:active {
+          transform: scale(0.97);
+        }
+
+        .nova-action-primary {
+          min-width: 150px;
+        }
+
+        .nova-action-icon {
+          font-size: 17px;
+        }
+
+        .nova-action-text {
+          font-size: 12px;
+          letter-spacing: 0.1em;
+        }
+
+        .nova-write-panel {
+          width: min(
+            680px,
+            calc(100vw - 32px)
+          );
+          margin-top: 22px;
+          padding: 12px;
+          border: 1px solid
+            rgba(
+              77,
+              234,
+              255,
+              0.18
+            );
+          border-radius: 18px;
+          background:
+            rgba(
+              3,
+              10,
+              17,
+              0.88
+            );
+          box-shadow:
+            0 18px 80px
+              rgba(
+                0,
+                0,
+                0,
+                0.4
+              );
+          backdrop-filter: blur(18px);
+        }
+
+        .nova-write-form {
+          display: flex;
+          gap: 9px;
+        }
+
+        .nova-input {
+          flex: 1;
+          min-width: 0;
+          height: 48px;
+          padding: 0 15px;
+          border: 1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.09
+            );
+          border-radius: 12px;
+          outline: none;
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.045
+            );
+          color: white;
+        }
+
+        .nova-input::placeholder {
+          color: rgba(
+            255,
+            255,
+            255,
+            0.28
+          );
+        }
+
+        .nova-input:focus {
+          border-color:
+            rgba(
+              77,
+              234,
+              255,
+              0.45
+            );
+          box-shadow:
+            0 0 0 3px
+              rgba(
+                77,
+                234,
+                255,
+                0.05
+              );
+        }
+
+        .nova-send {
+          width: 48px;
+          height: 48px;
+          border: 0;
+          border-radius: 12px;
+          background: #4deaff;
+          color: #021016;
+          font-size: 18px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .nova-send:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .nova-close-write {
+          margin-top: 9px;
+          border: 0;
+          background: transparent;
+          color: rgba(
+            255,
+            255,
+            255,
+            0.35
+          );
+          font-size: 10px;
+          letter-spacing: 0.14em;
+          cursor: pointer;
+        }
+
+        .nova-error {
+          width: min(
+            600px,
+            calc(100vw - 40px)
+          );
+          margin-top: 16px;
+          padding: 11px 14px;
+          border: 1px solid
+            rgba(
+              255,
+              80,
+              100,
+              0.2
+            );
+          border-radius: 10px;
+          background:
+            rgba(
+              255,
+              40,
+              70,
+              0.05
+            );
+          color: #ff8999;
+          text-align: center;
+          font-size: 12px;
+        }
+
+        .nova-conversation {
+          position: fixed;
+          right: 20px;
+          bottom: 20px;
+          z-index: 20;
+          width: min(
+            430px,
+            calc(100vw - 40px)
+          );
+          max-height: 48vh;
+          overflow-y: auto;
+          padding: 10px;
+          border: 1px solid
+            rgba(
+              77,
+              234,
+              255,
+              0.13
+            );
+          border-radius: 18px;
+          background:
+            rgba(
+              2,
+              7,
+              12,
+              0.84
+            );
+          backdrop-filter: blur(18px);
+          box-shadow:
+            0 20px 80px
+              rgba(
+                0,
+                0,
+                0,
+                0.5
+              );
+        }
+
+        .nova-message {
+          margin: 6px 0;
+          padding: 11px 13px;
+          border-radius: 12px;
+          font-size: 12px;
+          line-height: 1.5;
+          white-space: pre-wrap;
+        }
+
+        .nova-message-user {
+          margin-left: 20px;
+          background:
+            rgba(
+              77,
+              234,
+              255,
+              0.07
+            );
+          color: #d8fbff;
+        }
+
+        .nova-message-assistant {
+          margin-right: 20px;
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.035
+            );
+          color: rgba(
+            255,
+            255,
+            255,
+            0.75
+          );
+        }
+
+        .nova-menu {
+          position: fixed;
+          top: 72px;
+          right: 20px;
+          z-index: 50;
+          width: 220px;
+          padding: 8px;
+          border: 1px solid
+            rgba(
+              77,
+              234,
+              255,
+              0.18
+            );
+          border-radius: 16px;
+          background:
+            rgba(
+              3,
+              8,
+              14,
+              0.96
+            );
+          box-shadow:
+            0 20px 60px
+              rgba(
+                0,
+                0,
+                0,
+                0.45
+              );
+          backdrop-filter: blur(20px);
+        }
+
+        .nova-menu-title {
+          padding: 9px 11px;
+          color: rgba(
+            255,
+            255,
+            255,
+            0.35
+          );
+          font-size: 9px;
+          letter-spacing: 0.2em;
+        }
+
+        .nova-menu-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          padding: 12px 11px;
+          border: 0;
+          border-radius: 10px;
+          background: transparent;
+          color: rgba(
+            255,
+            255,
+            255,
+            0.72
+          );
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .nova-menu-item:hover {
+          background:
+            rgba(
+              77,
+              234,
+              255,
+              0.06
+            );
+          color: white;
+        }
+
+        .nova-footer {
+          position: absolute;
+          left: 50%;
+          bottom: 14px;
+          transform:
+            translateX(-50%);
+          color: rgba(
+            255,
+            255,
+            255,
+            0.18
+          );
+          font-size: 8px;
+          letter-spacing: 0.22em;
+          white-space: nowrap;
+          pointer-events: none;
+        }
+
+        @media (max-width: 600px) {
+          .nova-topbar {
+            padding-left: 16px;
+            padding-right: 16px;
+          }
+
+          .nova-main {
+            justify-content: center;
+            padding-top: 0;
+          }
+
+          .nova-core-canvas {
+            width: 84vw;
+            height: 84vw;
+          }
+
+          .nova-conversation {
+            right: 12px;
+            bottom: 12px;
+            width: calc(100vw - 24px);
+            max-height: 38vh;
+          }
+
+          .nova-actions {
+            margin-top: 18px;
+          }
+
+          .nova-action {
+            min-height: 46px;
+            padding: 0 17px;
+          }
+
+          .nova-footer {
+            display: none;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nova-action {
+            transition: none;
+          }
+        }
+      `}</style>
+
+      <div className="nova-app">
+
+        <div className="nova-grid" />
+        <div className="nova-vignette" />
+
+        {/* =====================================================
+            TOP BAR
+        ===================================================== */}
+
+        <header className="nova-topbar">
+
+          <div className="nova-brand">
+            <span className="nova-brand-mark" />
+
+            <span className="nova-brand-text">
+              N.O.V.A.
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14
+            }}
+          >
+            <div className="nova-status">
+
+              <span className="nova-status-dot" />
+
+              {isOnline
+                ? 'ONLINE'
+                : 'OFFLINE'}
+
+            </div>
+
+            <button
+              type="button"
+              className="nova-menu-button"
+              onClick={() =>
+                setShowMenu(
+                  (value) => !value
+                )
+              }
+              aria-label="NOVA Menü"
+            >
+              ☰
+            </button>
+          </div>
+
+        </header>
+
+        {/* =====================================================
+            MAIN
+        ===================================================== */}
+
+        <main className="nova-main">
+
+          <section className="nova-core-area">
+
+            <canvas
+              ref={canvasRef}
+              className="nova-core-canvas"
+              onClick={
+                handleCoreClick
+              }
+              role="button"
+              tabIndex={0}
+              aria-label="NOVA Core"
+              onKeyDown={(event) => {
+                if (
+                  event.key ===
+                    'Enter' ||
+                  event.key ===
+                    ' '
+                ) {
+                  handleCoreClick();
+                }
+              }}
+            />
+
+            <div className="nova-core-label">
+
+              <div className="nova-core-name">
+                NOVA
+              </div>
+
+              <div className="nova-status-label">
+                {getStatusText()}
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* ===================================================
+              LIVE TRANSCRIPT
+          =================================================== */}
+
+          <div className="nova-transcript">
+            {transcript}
+          </div>
+
+          {/* ===================================================
+              INSTRUCTION
+          =================================================== */}
+
+          <div className="nova-instruction">
+
+            {coreState ===
+            'listening'
+              ? 'TIPPE ERNEUT, UM ZUZUHÖREN ZU BEENDEN'
+              : 'TIPPE AUF NOVA, UM ZU SPRECHEN'}
+
+          </div>
+
+          {/* ===================================================
+              ACTION BUTTONS
+          =================================================== */}
+
+          <div className="nova-actions">
+
+            <button
+              type="button"
+              className="nova-action nova-action-primary"
+              onClick={() => {
+                if (
+                  coreState ===
+                  'listening'
+                ) {
+                  stopListening();
+                } else {
+                  startListening();
+                }
+              }}
+              disabled={
+                coreState ===
+                  'thinking' ||
+                coreState ===
+                  'speaking'
+              }
+            >
+
+              <span className="nova-action-icon">
+                {coreState ===
+                'listening'
+                  ? '■'
+                  : '◉'}
+              </span>
+
+              <span className="nova-action-text">
+                {coreState ===
+                'listening'
+                  ? 'STOPP'
+                  : 'SPRECHEN'}
+              </span>
+
+            </button>
+
+            <button
+              type="button"
+              className="nova-action"
+              onClick={() => {
+                setIsWriting(
+                  (value) =>
+                    !value
+                );
+
+                setError('');
+              }}
+            >
+
+              <span className="nova-action-icon">
+                ✎
+              </span>
+
+              <span className="nova-action-text">
+                SCHREIBEN
+              </span>
+
+            </button>
+
+          </div>
+
+          {/* ===================================================
+              WRITE MODE
+          =================================================== */}
+
+          {isWriting && (
+            <div className="nova-write-panel">
+
+              <form
+                className="nova-write-form"
+                onSubmit={
+                  handleSubmit
+                }
+              >
+
+                <input
+                  className="nova-input"
+                  value={input}
+                  onChange={(event) =>
+                    setInput(
+                      event.target
+                        .value
+                    )
+                  }
+                  placeholder="Nachricht an NOVA..."
+                  autoFocus
+                  disabled={
+                    coreState ===
+                    'thinking'
+                  }
+                />
+
+                <button
+                  className="nova-send"
+                  type="submit"
+                  disabled={
+                    !input.trim() ||
+                    coreState ===
+                      'thinking'
+                  }
+                  aria-label="Nachricht senden"
+                >
+                  ↑
+                </button>
+
+              </form>
+
+              <button
+                type="button"
+                className="nova-close-write"
+                onClick={() =>
+                  setIsWriting(false)
+                }
+              >
+                SCHREIBMODUS SCHLIESSEN
+              </button>
+
+            </div>
+          )}
+
+          {/* ===================================================
+              ERROR
+          =================================================== */}
+
+          {error && (
+            <div className="nova-error">
+              {error}
+            </div>
+          )}
+
+        </main>
+
+        {/* =====================================================
+            CONVERSATION
+        ===================================================== */}
+
+        {messages.length > 0 && (
+          <div className="nova-conversation">
+
+            {messages.map(
+              (message, index) => (
+                <div
+                  key={`${message
