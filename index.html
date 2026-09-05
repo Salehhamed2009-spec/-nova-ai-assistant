@@ -1,1529 +1,766 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>NOVA AI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>NOVA AI Assistant</title>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-<style>
-*{box-sizing:border-box}
+    :root {
+      --primary: #00d4ff;
+      --secondary: #0088cc;
+      --accent: #7568dd;
+      --dark: #0a0e1a;
+      --darker: #050709;
+      --border: #1a2a4a;
+      --text: #e0e8ff;
+      --glow: rgba(0, 212, 255, 0.3);
+    }
 
-body{
-margin:0;
-height:100vh;
-font-family:Arial,sans-serif;
-background:#05070d;
-color:white;
-overflow:hidden
-}
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #050709 0%, #0a0e1a 100%);
+      color: var(--text);
+      overflow: hidden;
+      letter-spacing: 0.5px;
+    }
 
-.app{
-height:100vh;
-display:flex;
-flex-direction:column
-}
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-header{
-height:65px;
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:0 20px;
-border-bottom:1px solid #202a3d
-}
+    /* ========== HEADER ========== */
+    header {
+      height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(10, 14, 26, 0.8), rgba(20, 28, 50, 0.8));
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 10px rgba(0, 212, 255, 0.1);
+    }
 
-.logo{
-font-size:22px;
-font-weight:bold;
-letter-spacing:6px
-}
+    .logo {
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      color: var(--primary);
+      text-shadow: 0 0 10px var(--glow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-.online{
-font-size:11px;
-color:#8d99ad
-}
+    .logo::before {
+      content: '●';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--primary), inset 0 0 4px rgba(255, 255, 255, 0.3);
+      animation: pulse 2s infinite;
+    }
 
-.online span{
-display:inline-block;
-width:7px;
-height:7px;
-border-radius:50%;
-background:#55e6a5;
-margin-right:6px
-}
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 8px var(--primary), inset 0 0 4px rgba(255, 255, 255, 0.3); }
+      50% { box-shadow: 0 0 15px var(--primary), inset 0 0 8px rgba(255, 255, 255, 0.5); }
+    }
 
-.layout{
-flex:1;
-display:grid;
-grid-template-columns:270px 1fr;
-min-height:0
-}
+    .online {
+      font-size: 11px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
 
-.sidebar{
-display:flex;
-flex-direction:column;
-gap:12px;
-padding:14px;
-background:#080c14;
-border-right:1px solid #202a3d
-}
+    .online span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--primary);
+      animation: pulse 1.5s infinite;
+    }
 
-button{
-border:0;
-color:white;
-cursor:pointer;
-font-size:14px
-}
+    /* ========== LAYOUT ========== */
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: 0;
+    }
 
-.new{
-padding:13px;
-border-radius:13px;
-font-weight:bold;
-background:linear-gradient(135deg,#398fd1,#7568dd)
-}
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(10, 14, 26, 0.6), rgba(10, 14, 26, 0.3));
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
 
-.chatList{
-flex:1;
-overflow:auto
-}
+    button {
+      border: 0;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
 
-.chat{
-display:flex;
-margin-bottom:5px;
-border-radius:12px;
-overflow:hidden
-}
+    button:hover {
+      transform: translateY(-2px);
+    }
 
-.chat.active{
-background:#18243a
-}
+    .new {
+      padding: 13px;
+      border-radius: 8px;
+      font-weight: bold;
+      background: linear-gradient(135deg, var(--secondary), var(--accent));
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+    }
 
-.chatSelect{
-flex:1;
-padding:11px;
-text-align:left;
-background:transparent
-}
+    .new:hover {
+      box-shadow: 0 0 25px rgba(0, 212, 255, 0.4), 0 0 40px rgba(117, 104, 221, 0.2);
+      border: 1px solid rgba(0, 212, 255, 0.6);
+    }
 
-.chatTitle{
-overflow:hidden;
-white-space:nowrap;
-text-overflow:ellipsis
-}
+    .chatList {
+      flex: 1;
+      overflow: auto;
+    }
 
-.chatCount{
-font-size:10px;
-color:#8793a8;
-margin-top:4px
-}
+    .chat {
+      display: flex;
+      margin-bottom: 5px;
+      border-radius: 6px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
 
-.chatButton{
-width:35px;
-background:transparent;
-color:#8b97ab
-}
+    .chat:hover {
+      background: rgba(0, 212, 255, 0.05);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
 
-.delete{
-color:#ff718f
-}
+    .chat.active {
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.4);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    }
 
-.settings{
-height:44px;
-border-radius:12px;
-background:#151e30
-}
+    .chatSelect {
+      flex: 1;
+      padding: 11px;
+      text-align: left;
+      background: transparent;
+      border: none;
+    }
 
-.main{
-display:flex;
-flex-direction:column;
-min-width:0
-}
+    .chatTitle {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary);
+    }
 
-.messages{
-flex:1;
-overflow:auto;
-padding:25px max(15px,calc((100vw - 900px)/2));
-display:flex;
-flex-direction:column;
-gap:13px
-}
+    .chatCount {
+      font-size: 10px;
+      color: rgba(224, 232, 255, 0.6);
+      margin-top: 4px;
+    }
 
-.welcome{
-margin:auto;
-text-align:center;
-color:#8d99ad
-}
+    .chatButton {
+      width: 35px;
+      height: 35px;
+      background: transparent;
+      color: rgba(224, 232, 255, 0.6);
+      border: none;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
 
-.welcome h1{
-font-size:38px;
-color:white;
-margin:0 0 8px
-}
+    .chatButton:hover {
+      background: rgba(0, 212, 255, 0.1);
+      color: var(--primary);
+    }
 
-.message{
-max-width:850px;
-padding:12px 15px;
-border-radius:18px;
-line-height:1.5;
-white-space:pre-wrap;
-word-break:break-word
-}
+    .delete:hover {
+      color: #ff4472;
+      background: rgba(255, 68, 114, 0.1);
+    }
 
-.user{
-align-self:flex-end;
-background:linear-gradient(135deg,#398fd1,#7568dd)
-}
+    .settings {
+      height: 44px;
+      border-radius: 6px;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border: none;
+      cursor: pointer;
+      color: var(--primary);
+    }
 
-.nova{
-align-self:flex-start;
-background:#0d1422;
-border:1px solid #263249
-}
+    .settings:hover {
+      background: rgba(0, 212, 255, 0.15);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    }
 
-.composer{
-display:flex;
-gap:8px;
-padding:10px max(10px,calc((100vw - 900px)/2));
-border-top:1px solid #202a3d
-}
+    /* ========== MAIN CONTENT ========== */
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: linear-gradient(135deg, rgba(5, 7, 9, 0.8), rgba(15, 20, 35, 0.8));
+    }
 
-.composer input{
-flex:1;
-min-width:0;
-padding:14px;
-border-radius:15px;
-border:1px solid #263249;
-background:#0d1422;
-color:white;
-outline:none
-}
+    .messages {
+      flex: 1;
+      overflow: auto;
+      padding: 25px max(15px, calc((100vw - 900px) / 2));
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      position: relative;
+    }
 
-.send{
-padding:0 20px;
-border-radius:15px;
-background:linear-gradient(135deg,#398fd1,#7568dd)
-}
+    .welcome {
+      margin: auto;
+      text-align: center;
+      color: rgba(224, 232, 255, 0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
 
-.mobile{
-display:none
-}
+    .welcome h1 {
+      font-size: 38px;
+      color: var(--primary);
+      margin: 0;
+      text-shadow: 0 0 20px var(--glow);
+      letter-spacing: 1px;
+    }
 
-.panel{
-position:fixed;
-inset:0;
-display:none;
-align-items:flex-end;
-background:#000b;
-z-index:100
-}
+    /* NOVA CORE - WELCOME */
+    .nova-core {
+      width: 120px;
+      height: 120px;
+      margin: 20px auto;
+      position: relative;
+      animation: coreFloat 3s ease-in-out infinite;
+    }
 
-.panel.open{
-display:flex
-}
+    @keyframes coreFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
 
-.sheet{
-width:100%;
-max-height:90vh;
-overflow:auto;
-background:#111a2b;
-border-radius:25px 25px 0 0;
-padding:18px
-}
+    .core-circle {
+      width: 100%;
+      height: 100%;
+      border: 2px solid var(--primary);
+      border-radius: 50%;
+      position: relative;
+      box-shadow: 0 0 20px var(--glow), inset 0 0 20px rgba(0, 212, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-.panelHeader{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding-bottom:15px;
-border-bottom:1px solid #263249
-}
+    .core-circle::before {
+      content: '';
+      width: 80px;
+      height: 80px;
+      border: 1px solid var(--primary);
+      border-radius: 50%;
+      position: absolute;
+      animation: rotate 8s linear infinite;
+    }
 
-.close{
-background:#1c273b;
-padding:10px 13px;
-border-radius:10px
-}
+    .core-circle::after {
+      content: '';
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--secondary);
+      border-radius: 50%;
+      position: absolute;
+      animation: rotate -5s linear infinite;
+    }
 
-.section{
-padding:18px 0;
-border-bottom:1px solid #263249
-}
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
 
-.description{
-color:#8d99ad;
-font-size:12px;
-line-height:1.5;
-margin-top:5px
-}
+    .core-dot {
+      width: 20px;
+      height: 20px;
+      background: var(--primary);
+      border-radius: 50%;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 0 15px var(--primary), 0 0 30px rgba(0, 212, 255, 0.4);
+      animation: corePulse 2s ease-in-out infinite;
+    }
 
-.memoryForm{
-display:flex;
-gap:7px;
-margin-top:12px
-}
+    @keyframes corePulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 15px var(--primary), 0 0 30px rgba(0, 212, 255, 0.4); }
+      50% { transform: scale(1.2); box-shadow: 0 0 25px var(--primary), 0 0 50px rgba(0, 212, 255, 0.6); }
+    }
 
-.memoryForm input{
-flex:1;
-padding:11px;
-border-radius:11px;
-border:1px solid #263249;
-background:#080e19;
-color:white
-}
+    .message {
+      max-width: 850px;
+      padding: 14px 16px;
+      border-radius: 6px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      animation: slideIn 0.3s ease;
+      border: 1px solid;
+    }
 
-.memoryForm button{
-padding:0 14px;
-border-radius:11px;
-background:#398fd1
-}
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-.memory{
-display:flex;
-justify-content:space-between;
-gap:8px;
-padding:10px;
-margin-top:7px;
-border:1px solid #263249;
-border-radius:11px;
-font-size:12px
-}
+    .user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(0, 136, 204, 0.3), rgba(117, 104, 221, 0.3));
+      border: 1px solid rgba(0, 212, 255, 0.4);
+      max-width: 85%;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.1);
+    }
 
-.memory button{
-background:#321824;
-color:#ff718f;
-border-radius:8px
-}
+    .nova {
+      align-self: flex-start;
+      background: rgba(10, 14, 26, 0.6);
+      border: 1px solid var(--border);
+      max-width: 85%;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.05);
+    }
 
-.danger{
-margin-top:10px;
-padding:10px 13px;
-border-radius:10px;
-background:#321824;
-color:#ff718f
-}
+    .loading span {
+      display: inline-block;
+      animation: blink 1.4s infinite;
+      color: var(--primary);
+    }
 
-@media(max-width:700px){
+    .loading span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
 
-.layout{
-display:block
-}
+    .loading span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
 
-.sidebar{
-display:none
-}
+    @keyframes blink {
+      0%, 60%, 100% { opacity: 0.3; }
+      30% { opacity: 1; }
+    }
 
-.messages{
-padding:15px 10px
-}
+    /* ========== COMPOSER ========== */
+    .composer {
+      display: flex;
+      gap: 8px;
+      padding: 12px max(10px, calc((100vw - 900px) / 2));
+      border-top: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(10, 14, 26, 0.9), rgba(15, 20, 35, 0.9));
+      backdrop-filter: blur(10px);
+    }
 
-.welcome h1{
-font-size:29px
-}
+    .composer input {
+      flex: 1;
+      min-width: 0;
+      padding: 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(10, 14, 26, 0.8);
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
 
-.composer{
-padding:9px
-}
+    .composer input:focus {
+      border: 1px solid rgba(0, 212, 255, 0.6);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+      background: rgba(10, 14, 26, 0.95);
+    }
 
-.send{
-padding:0 15px
-}
+    .composer input::placeholder {
+      color: rgba(224, 232, 255, 0.4);
+    }
 
-.mobile{
-height:58px;
-display:flex;
-gap:5px;
-padding:5px;
-border-top:1px solid #202a3d;
-background:#080d17
-}
+    .send {
+      padding: 0 20px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--secondary), var(--accent));
+      font-weight: 600;
+      border: 1px solid rgba(0, 212, 255, 0.4);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    }
 
-.mobile button{
-flex:1;
-border-radius:13px;
-background:transparent;
-font-size:18px
-}
-}
-</style>
+    .send:hover {
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.4), 0 0 30px rgba(117, 104, 221, 0.2);
+      border: 1px solid rgba(0, 212, 255, 0.6);
+    }
+
+    /* ========== MOBILE ========== */
+    .mobile {
+      display: none;
+    }
+
+    /* ========== PANEL ========== */
+    .panel {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: flex-end;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 100;
+      animation: fadeIn 0.3s ease;
+      backdrop-filter: blur(5px);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .panel.open {
+      display: flex;
+    }
+
+    .sheet {
+      width: 100%;
+      max-height: 90vh;
+      overflow: auto;
+      background: linear-gradient(180deg, rgba(10, 14, 26, 0.95), rgba(15, 20, 35, 0.95));
+      border-radius: 20px 20px 0 0;
+      padding: 18px;
+      animation: slideUp 0.3s ease;
+      border-top: 1px solid var(--border);
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .panelHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 15px;
+    }
+
+    .panelHeader h2 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--primary);
+      letter-spacing: 1px;
+    }
+
+    .close {
+      background: rgba(0, 212, 255, 0.1);
+      padding: 10px 13px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--primary);
+    }
+
+    .close:hover {
+      background: rgba(0, 212, 255, 0.2);
+      border: 1px solid rgba(0, 212, 255, 0.5);
+    }
+
+    .section {
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .section b {
+      font-size: 15px;
+      display: block;
+      margin-bottom: 8px;
+      color: var(--primary);
+    }
+
+    .description {
+      color: rgba(224, 232, 255, 0.6);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 5px;
+      margin-bottom: 12px;
+    }
+
+    .memoryForm {
+      display: flex;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .memoryForm input {
+      flex: 1;
+      padding: 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(10, 14, 26, 0.8);
+      color: var(--text);
+      outline: none;
+      font-size: 13px;
+    }
+
+    .memoryForm input:focus {
+      border: 1px solid rgba(0, 212, 255, 0.6);
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    }
+
+    .memoryForm button {
+      padding: 0 14px;
+      border-radius: 6px;
+      background: rgba(0, 212, 255, 0.2);
+      border: 1px solid rgba(0, 212, 255, 0.4);
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .memoryForm button:hover {
+      background: rgba(0, 212, 255, 0.3);
+      border: 1px solid rgba(0, 212, 255, 0.6);
+    }
+
+    .memory {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px;
+      margin-top: 7px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      align-items: center;
+      background: rgba(0, 212, 255, 0.05);
+    }
+
+    .memory button {
+      background: rgba(255, 68, 114, 0.1);
+      color: #ff4472;
+      border-radius: 4px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255, 68, 114, 0.3);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .memory button:hover {
+      background: rgba(255, 68, 114, 0.2);
+      border: 1px solid rgba(255, 68, 114, 0.6);
+    }
+
+    .danger {
+      margin-top: 10px;
+      padding: 10px 13px;
+      border-radius: 6px;
+      background: rgba(255, 68, 114, 0.1);
+      color: #ff4472;
+      border: 1px solid rgba(255, 68, 114, 0.3);
+      cursor: pointer;
+      width: 100%;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .danger:hover {
+      background: rgba(255, 68, 114, 0.2);
+      border: 1px solid rgba(255, 68, 114, 0.6);
+    }
+
+    /* ========== SCROLLBAR ========== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 212, 255, 0.3);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 212, 255, 0.6);
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 700px) {
+      .layout {
+        display: block;
+      }
+
+      .sidebar {
+        display: none;
+        position: fixed;
+        left: 0;
+        top: 65px;
+        width: 270px;
+        height: calc(100vh - 123px);
+        z-index: 50;
+        border-right: 1px solid var(--border);
+      }
+
+      .sidebar.open {
+        display: flex;
+      }
+
+      .messages {
+        padding: 15px 10px;
+      }
+
+      .welcome h1 {
+        font-size: 28px;
+      }
+
+      .nova-core {
+        width: 80px;
+        height: 80px;
+      }
+
+      .message {
+        max-width: 95%;
+      }
+
+      .composer {
+        padding: 9px;
+      }
+
+      .send {
+        padding: 0 15px;
+      }
+
+      .mobile {
+        height: 58px;
+        display: flex;
+        gap: 5px;
+        padding: 5px;
+        border-top: 1px solid var(--border);
+        background: linear-gradient(90deg, rgba(10, 14, 26, 0.9), rgba(15, 20, 35, 0.9));
+      }
+
+      .mobile button {
+        flex: 1;
+        border-radius: 6px;
+        background: transparent;
+        font-size: 18px;
+        border: none;
+        cursor: pointer;
+        color: var(--primary);
+      }
+
+      .mobile button:hover {
+        background: rgba(0, 212, 255, 0.1);
+      }
+    }
+  </style>
 </head>
 
 <body>
-
-<div class="app">
-
-<header>
-
-<div class="logo">
-NOVA
-</div>
-
-<div class="online">
-<span></span>
-ONLINE
-</div>
-
-</header>
-
-<div class="layout">
-
-<aside class="sidebar">
-
-<button class="new" id="newChat">
-＋ Neuer Chat
-</button>
-
-<div class="chatList" id="chatList"></div>
-
-<button class="settings" id="settings">
-⚙ Einstellungen
-</button>
-
-</aside>
-
-<main class="main">
-
-<div class="messages" id="messages"></div>
-
-<form class="composer" id="form">
-
-<input
-id="input"
-maxlength="4000"
-autocomplete="off"
-placeholder="Nachricht an NOVA…"
->
-
-<button class="send">
-Senden
-</button>
-
-</form>
-
-</main>
-
-</div>
-
-<nav class="mobile">
-
-<button id="mobileNew">
-＋
-</button>
-
-<button id="mobileSettings">
-⚙
-</button>
-
-<button id="mobileChats">
-☰
-</button>
-
-</nav>
-
-</div>
-
-
-<div class="panel" id="panel">
-
-<div class="sheet">
-
-<div class="panelHeader">
-
-<h2>
-NOVA Einstellungen
-</h2>
-
-<button
-class="close"
-id="close"
->
-✕
-</button>
-
-</div>
-
-<div id="panelContent"></div>
-
-</div>
-
-</div>
-
-
-<script>
-
-"use strict";
-
-
-const STORAGE={
-
-chats:"nova_chats",
-
-current:"nova_current",
-
-memory:"nova_memory"
-
-};
-
-
-let chats=
-JSON.parse(
-localStorage.getItem(
-STORAGE.chats
-)||"[]"
-);
-
-
-let memories=
-JSON.parse(
-localStorage.getItem(
-STORAGE.memory
-)||"[]"
-);
-
-
-let current=
-localStorage.getItem(
-STORAGE.current
-);
-
-
-function save(){
-
-localStorage.setItem(
-STORAGE.chats,
-JSON.stringify(chats)
-);
-
-localStorage.setItem(
-STORAGE.memory,
-JSON.stringify(memories)
-);
-
-localStorage.setItem(
-STORAGE.current,
-current
-);
-
-}
-
-
-function createChat(){
-
-const chat={
-
-id:
-Date.now()+"_"+Math.random(),
-
-title:
-"Neuer Chat",
-
-messages:[],
-
-updated:
-Date.now()
-
-};
-
-chats.unshift(chat);
-
-current=
-chat.id;
-
-save();
-
-return chat;
-
-}
-
-
-if(!chats.length){
-
-createChat();
-
-}
-
-
-if(
-!chats.find(
-x=>x.id===current
-)
-){
-
-current=
-chats[0].id;
-
-}
-
-
-function getChat(){
-
-return chats.find(
-x=>x.id===current
-);
-
-}
-
-
-function render(){
-
-renderChats();
-
-renderMessages();
-
-}
-
-
-function renderChats(){
-
-const list=
-document.getElementById(
-"chatList"
-);
-
-list.innerHTML="";
-
-
-[...chats]
-.sort(
-(a,b)=>b.updated-a.updated
-)
-.forEach(
-chat=>{
-
-const row=
-document.createElement(
-"div"
-);
-
-row.className=
-"chat"+
-(
-chat.id===current
-?" active"
-:""
-);
-
-
-const select=
-document.createElement(
-"button"
-);
-
-select.className=
-"chatSelect";
-
-
-const title=
-document.createElement(
-"div"
-);
-
-title.className=
-"chatTitle";
-
-title.textContent=
-chat.title;
-
-
-const count=
-document.createElement(
-"div"
-);
-
-count.className=
-"chatCount";
-
-count.textContent=
-chat.messages.length+
-" Nachrichten";
-
-
-select.appendChild(
-title
-);
-
-select.appendChild(
-count
-);
-
-
-select.onclick=()=>{
-
-current=
-chat.id;
-
-save();
-
-render();
-
-};
-
-
-const rename=
-document.createElement(
-"button"
-);
-
-rename.className=
-"chatButton";
-
-rename.textContent=
-"✎";
-
-
-rename.onclick=()=>{
-
-const name=
-prompt(
-"Chat umbenennen:",
-chat.title
-);
-
-if(name&&name.trim()){
-
-chat.title=
-name.trim();
-
-chat.updated=
-Date.now();
-
-save();
-
-render();
-
-}
-
-};
-
-
-const remove=
-document.createElement(
-"button"
-);
-
-remove.className=
-"chatButton delete";
-
-remove.textContent=
-"×";
-
-
-remove.onclick=()=>{
-
-if(
-!confirm(
-"Diesen Chat löschen?"
-)
-){
-
-return;
-
-}
-
-
-chats=
-chats.filter(
-x=>x.id!==chat.id
-);
-
-
-if(
-chat.id===current
-){
-
-if(chats.length){
-
-current=
-chats[0].id;
-
-}else{
-
-createChat();
-
-}
-
-}
-
-
-save();
-
-render();
-
-};
-
-
-row.appendChild(
-select
-);
-
-row.appendChild(
-rename
-);
-
-row.appendChild(
-remove
-);
-
-list.appendChild(
-row
-);
-
-});
-
-}
-
-
-function renderMessages(){
-
-const box=
-document.getElementById(
-"messages"
-);
-
-box.innerHTML="";
-
-
-const chat=
-getChat();
-
-
-if(!chat.messages.length){
-
-box.innerHTML=`
-
-<div class="welcome">
-
-<h1>
-Wie kann ich helfen?
-</h1>
-
-<div>
-Dein persönlicher KI-Assistent
-</div>
-
-</div>
-
-`;
-
-return;
-
-}
-
-
-chat.messages.forEach(
-message=>{
-
-const div=
-document.createElement(
-"div"
-);
-
-div.className=
-"message "+
-(
-message.role==="user"
-?"user"
-:"nova"
-);
-
-div.textContent=
-message.text;
-
-box.appendChild(
-div
-);
-
-});
-
-
-box.scrollTop=
-box.scrollHeight;
-
-}
-
-
-function addMemory(text){
-
-text=
-text.trim();
-
-
-if(!text){
-
-return false;
-
-}
-
-
-if(
-memories.some(
-x=>
-x.toLowerCase()===
-text.toLowerCase()
-)
-){
-
-return false;
-
-}
-
-
-memories.unshift(
-text
-);
-
-memories=
-memories.slice(
-0,
-100
-);
-
-save();
-
-return true;
-
-}
-
-
-function openSettings(){
-
-const panel=
-document.getElementById(
-"panel"
-);
-
-panel.classList.add(
-"open"
-);
-
-
-const content=
-document.getElementById(
-"panelContent"
-);
-
-
-content.innerHTML=`
-
-<div class="section">
-
-<b>
-🧠 Memory
-</b>
-
-<div class="description">
-Diese Informationen bleiben auch bei neuen Chats erhalten.
-</div>
-
-<div class="memoryForm">
-
-<input
-id="memoryInput"
-placeholder="z. B. Ich mag Fußball"
-maxlength="500"
->
-
-<button id="memorySave">
-Merken
-</button>
-
-</div>
-
-<div id="memoryList"></div>
-
-</div>
-
-
-<div class="section">
-
-<b>
-🤖 KI
-</b>
-
-<div class="description">
-NOVA verwendet deine Open-Source-KI über Hugging Face.
-Der HF_TOKEN bleibt ausschließlich auf dem Server.
-</div>
-
-</div>
-
-
-<div class="section">
-
-<button
-class="danger"
-id="clearChats"
->
-Alle Chats löschen
-</button>
-
-<br>
-
-<button
-class="danger"
-id="clearMemory"
->
-Memory löschen
-</button>
-
-</div>
-
-`;
-
-
-renderMemory();
-
-
-document
-.getElementById(
-"memorySave"
-)
-.onclick=()=>{
-
-const input=
-document.getElementById(
-"memoryInput"
-);
-
-if(
-addMemory(
-input.value
-)
-){
-
-input.value="";
-
-renderMemory();
-
-}
-
-};
-
-
-document
-.getElementById(
-"clearChats"
-)
-.onclick=()=>{
-
-if(
-confirm(
-"Wirklich alle Chats löschen?"
-)
-){
-
-chats=[];
-
-createChat();
-
-save();
-
-render();
-
-panel.classList.remove(
-"open"
-);
-
-}
-
-};
-
-
-document
-.getElementById(
-"clearMemory"
-)
-.onclick=()=>{
-
-if(
-confirm(
-"Memory komplett löschen?"
-)
-){
-
-memories=[];
-
-save();
-
-renderMemory();
-
-}
-
-};
-
-}
-
-
-function renderMemory(){
-
-const list=
-document.getElementById(
-"memoryList"
-);
-
-if(!list){
-
-return;
-
-}
-
-
-list.innerHTML="";
-
-
-memories.forEach(
-(memory,index)=>{
-
-const row=
-document.createElement(
-"div"
-);
-
-row.className=
-"memory";
-
-
-const text=
-document.createElement(
-"span"
-);
-
-text.textContent=
-memory;
-
-
-const remove=
-document.createElement(
-"button"
-);
-
-remove.textContent=
-"×";
-
-
-remove.onclick=()=>{
-
-memories.splice(
-index,
-1
-);
-
-save();
-
-renderMemory();
-
-};
-
-
-row.appendChild(
-text
-);
-
-row.appendChild(
-remove
-);
-
-list.appendChild(
-row
-);
-
-});
-
-}
-
-
-async function sendMessage(text){
-
-const chat=
-getChat();
-
-
-chat.messages.push({
-
-role:"user",
-
-text:text,
-
-time:Date.now()
-
-});
-
-
-if(
-chat.title===
-"Neuer Chat"
-){
-
-chat.title=
-text
-.replace(
-/\s+/g,
-" "
-)
-.substring(
-0,
-45
-);
-
-}
-
-
-chat.updated=
-Date.now();
-
-save();
-
-render();
-
-
-const memoryCommand=
-text.match(
-/^(?:merk dir|merke dir|speichere dir|vergiss nicht)\s*:?\s*(.+)$/i
-);
-
-
-if(memoryCommand){
-
-const saved=
-addMemory(
-memoryCommand[1]
-);
-
-
-chat.messages.push({
-
-role:"nova",
-
-text:
-saved
-?
-"Verstanden. Ich habe mir das gemerkt. 🧠"
-:
-"Das habe ich bereits gespeichert."
-
-});
-
-chat.updated=
-Date.now();
-
-save();
-
-render();
-
-return;
-
-}
-
-
-const loading=
-document.createElement(
-"div"
-);
-
-loading.className=
-"message nova";
-
-loading.textContent=
-"NOVA denkt…";
-
-document
-.getElementById(
-"messages"
-)
-.appendChild(
-loading
-);
-
-
-try{
-
-const response=
-await fetch(
-"/api/chat",
-{
-
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/json"
-},
-
-body:
-JSON.stringify({
-
-message:text,
-
-history:
-chat.messages
-.slice(-20),
-
-memories:
-memories
-
-})
-
-}
-);
-
-
-let data;
-
-
-try{
-
-data=
-await response.json();
-
-}catch{
-
-throw new Error(
-"Ungültige Antwort vom Server."
-);
-
-}
-
-
-if(!response.ok){
-
-throw new Error(
-data.error||
-"Die KI konnte nicht antworten."
-);
-
-}
-
-
-if(
-!data.answer
-){
-
-throw new Error(
-"Die KI hat keine Antwort geliefert."
-);
-
-}
-
-
-chat.messages.push({
-
-role:"nova",
-
-text:data.answer,
-
-time:Date.now()
-
-});
-
-
-}catch(error){
-
-chat.messages.push({
-
-role:"nova",
-
-text:
-"Entschuldigung — "+
-error.message,
-
-time:Date.now()
-
-});
-
-}
-
-
-chat.updated=
-Date.now();
-
-save();
-
-render();
-
-}
-
-
-document
-.getElementById(
-"form"
-)
-.onsubmit=
-event=>{
-
-event.preventDefault();
-
-
-const input=
-document.getElementById(
-"input"
-);
-
-
-const text=
-input.value.trim();
-
-
-if(!text){
-
-return;
-
-}
-
-
-input.value="";
-
-
-sendMessage(
-text
-);
-
-};
-
-
-document
-.getElementById(
-"newChat"
-)
-.onclick=
-()=>{
-
-createChat();
-
-render();
-
-};
-
-
-document
-.getElementById(
-"mobileNew"
-)
-.onclick=
-()=>{
-
-createChat();
-
-render();
-
-};
-
-
-document
-.getElementById(
-"settings"
-)
-.onclick=
-openSettings;
-
-
-document
-.getElementById(
-"mobileSettings"
-)
-.onclick=
-openSettings;
-
-
-document
-.getElementById(
-"close"
-)
-.onclick=
-()=>{
-
-document
-.getElementById(
-"panel"
-)
-.classList.remove(
-"open"
-);
-
-};
-
-
-document
-.getElementById(
-"mobileChats"
-)
-.onclick=
-()=>{
-
-if(!chats.length){
-
-return;
-
-}
-
-
-const text=
-chats
-.map(
-(chat,index)=>
-(index+1)+
-". "+
-chat.title
-)
-.join(
-"\n"
-);
-
-
-const choice=
-prompt(
-"Deine Chats:\n\n"+
-text+
-"\n\nNummer eingeben:"
-);
-
-
-const index=
-Number(choice)-1;
-
-
-if(
-Number.isInteger(index)&&
-chats[index]
-){
-
-current=
-chats[index].id;
-
-save();
-
-render();
-
-}
-
-};
-
-
-document
-.getElementById(
-"panel"
-)
-.onclick=
-event=>{
-
-if(
-event.target.id===
-"panel"
-){
-
-event.currentTarget
-.classList.remove(
-"open"
-);
-
-}
-
-};
-
-
-save();
-
-render();
-
-</script>
-
+  <div class="app">
+    <header>
+      <div class="logo">NOVA</div>
+      <div class="online">
+        ONLINE
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <button class="new" id="newChat">＋ NEUER CHAT</button>
+        <div class="chatList" id="chatList"></div>
+        <button class="settings" id="settings">⚙ EINSTELLUNGEN</button>
+      </aside>
+
+      <main class="main">
+        <div class="messages" id="messages"></div>
+        <form class="composer" id="form">
+          <input id="input" maxlength="4000" autocomplete="off" placeholder="Nachricht an NOVA…" />
+          <button class="send" type="submit">SENDEN</button>
+        </form>
+      </main>
+    </div>
+
+    <nav class="mobile">
+      <button id="mobileNew">＋</button>
+      <button id="mobileSettings">⚙</button>
+      <button id="mobileChats">☰</button>
+    </nav>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="sheet">
+      <div class="panelHeader">
+        <h2>⚙ EINSTELLUNGEN</h2>
+        <button class="close" id="close">✕</button>
+      </div>
+      <div id="panelContent"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import './config.js';
+    import './js/app.js';
+  </script>
 </body>
 </html>
