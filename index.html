@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NOVA AI</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+height:100vh;
+font-family:Arial,sans-serif;
+background:#05070d;
+color:white;
+overflow:hidden
+}
+
+.app{
+height:100vh;
+display:flex;
+flex-direction:column
+}
+
+header{
+height:65px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 20px;
+border-bottom:1px solid #202a3d
+}
+
+.logo{
+font-size:22px;
+font-weight:bold;
+letter-spacing:6px
+}
+
+.online{
+font-size:11px;
+color:#8d99ad
+}
+
+.online span{
+display:inline-block;
+width:7px;
+height:7px;
+border-radius:50%;
+background:#55e6a5;
+margin-right:6px
+}
+
+.layout{
+flex:1;
+display:grid;
+grid-template-columns:270px 1fr;
+min-height:0
+}
+
+.sidebar{
+display:flex;
+flex-direction:column;
+gap:12px;
+padding:14px;
+background:#080c14;
+border-right:1px solid #202a3d
+}
+
+button{
+border:0;
+color:white;
+cursor:pointer;
+font-size:14px
+}
+
+.new{
+padding:13px;
+border-radius:13px;
+font-weight:bold;
+background:linear-gradient(135deg,#398fd1,#7568dd)
+}
+
+.chatList{
+flex:1;
+overflow:auto
+}
+
+.chat{
+display:flex;
+margin-bottom:5px;
+border-radius:12px;
+overflow:hidden
+}
+
+.chat.active{
+background:#18243a
+}
+
+.chatSelect{
+flex:1;
+padding:11px;
+text-align:left;
+background:transparent
+}
+
+.chatTitle{
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis
+}
+
+.chatCount{
+font-size:10px;
+color:#8793a8;
+margin-top:4px
+}
+
+.chatButton{
+width:35px;
+background:transparent;
+color:#8b97ab
+}
+
+.delete{
+color:#ff718f
+}
+
+.settings{
+height:44px;
+border-radius:12px;
+background:#151e30
+}
+
+.main{
+display:flex;
+flex-direction:column;
+min-width:0
+}
+
+.messages{
+flex:1;
+overflow:auto;
+padding:25px max(15px,calc((100vw - 900px)/2));
+display:flex;
+flex-direction:column;
+gap:13px
+}
+
+.welcome{
+margin:auto;
+text-align:center;
+color:#8d99ad
+}
+
+.welcome h1{
+font-size:38px;
+color:white;
+margin:0 0 8px
+}
+
+.message{
+max-width:850px;
+padding:12px 15px;
+border-radius:18px;
+line-height:1.5;
+white-space:pre-wrap;
+word-break:break-word
+}
+
+.user{
+align-self:flex-end;
+background:linear-gradient(135deg,#398fd1,#7568dd)
+}
+
+.nova{
+align-self:flex-start;
+background:#0d1422;
+border:1px solid #263249
+}
+
+.composer{
+display:flex;
+gap:8px;
+padding:10px max(10px,calc((100vw - 900px)/2));
+border-top:1px solid #202a3d
+}
+
+.composer input{
+flex:1;
+min-width:0;
+padding:14px;
+border-radius:15px;
+border:1px solid #263249;
+background:#0d1422;
+color:white;
+outline:none
+}
+
+.send{
+padding:0 20px;
+border-radius:15px;
+background:linear-gradient(135deg,#398fd1,#7568dd)
+}
+
+.mobile{
+display:none
+}
+
+.panel{
+position:fixed;
+inset:0;
+display:none;
+align-items:flex-end;
+background:#000b;
+z-index:100
+}
+
+.panel.open{
+display:flex
+}
+
+.sheet{
+width:100%;
+max-height:90vh;
+overflow:auto;
+background:#111a2b;
+border-radius:25px 25px 0 0;
+padding:18px
+}
+
+.panelHeader{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding-bottom:15px;
+border-bottom:1px solid #263249
+}
+
+.close{
+background:#1c273b;
+padding:10px 13px;
+border-radius:10px
+}
+
+.section{
+padding:18px 0;
+border-bottom:1px solid #263249
+}
+
+.description{
+color:#8d99ad;
+font-size:12px;
+line-height:1.5;
+margin-top:5px
+}
+
+.memoryForm{
+display:flex;
+gap:7px;
+margin-top:12px
+}
+
+.memoryForm input{
+flex:1;
+padding:11px;
+border-radius:11px;
+border:1px solid #263249;
+background:#080e19;
+color:white
+}
+
+.memoryForm button{
+padding:0 14px;
+border-radius:11px;
+background:#398fd1
+}
+
+.memory{
+display:flex;
+justify-content:space-between;
+gap:8px;
+padding:10px;
+margin-top:7px;
+border:1px solid #263249;
+border-radius:11px;
+font-size:12px
+}
+
+.memory button{
+background:#321824;
+color:#ff718f;
+border-radius:8px
+}
+
+.danger{
+margin-top:10px;
+padding:10px 13px;
+border-radius:10px;
+background:#321824;
+color:#ff718f
+}
+
+@media(max-width:700px){
+
+.layout{
+display:block
+}
+
+.sidebar{
+display:none
+}
+
+.messages{
+padding:15px 10px
+}
+
+.welcome h1{
+font-size:29px
+}
+
+.composer{
+padding:9px
+}
+
+.send{
+padding:0 15px
+}
+
+.mobile{
+height:58px;
+display:flex;
+gap:5px;
+padding:5px;
+border-top:1px solid #202a3d;
+background:#080d17
+}
+
+.mobile button{
+flex:1;
+border-radius:13px;
+background:transparent;
+font-size:18px
+}
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+
+<div class="logo">
+NOVA
+</div>
+
+<div class="online">
+<span></span>
+ONLINE
+</div>
+
+</header>
+
+<div class="layout">
+
+<aside class="sidebar">
+
+<button class="new" id="newChat">
+＋ Neuer Chat
+</button>
+
+<div class="chatList" id="chatList"></div>
+
+<button class="settings" id="settings">
+⚙ Einstellungen
+</button>
+
+</aside>
+
+<main class="main">
+
+<div class="messages" id="messages"></div>
+
+<form class="composer" id="form">
+
+<input
+id="input"
+maxlength="4000"
+autocomplete="off"
+placeholder="Nachricht an NOVA…"
+>
+
+<button class="send">
+Senden
+</button>
+
+</form>
+
+</main>
+
+</div>
+
+<nav class="mobile">
+
+<button id="mobileNew">
+＋
+</button>
+
+<button id="mobileSettings">
+⚙
+</button>
+
+<button id="mobileChats">
+☰
+</button>
+
+</nav>
+
+</div>
+
+
+<div class="panel" id="panel">
+
+<div class="sheet">
+
+<div class="panelHeader">
+
+<h2>
+NOVA Einstellungen
+</h2>
+
+<button
+class="close"
+id="close"
+>
+✕
+</button>
+
+</div>
+
+<div id="panelContent"></div>
+
+</div>
+
+</div>
+
+
+<script>
+
+"use strict";
+
+
+const STORAGE={
+
+chats:"nova_chats",
+
+current:"nova_current",
+
+memory:"nova_memory"
+
+};
+
+
+let chats=
+JSON.parse(
+localStorage.getItem(
+STORAGE.chats
+)||"[]"
+);
+
+
+let memories=
+JSON.parse(
+localStorage.getItem(
+STORAGE.memory
+)||"[]"
+);
+
+
+let current=
+localStorage.getItem(
+STORAGE.current
+);
+
+
+function save(){
+
+localStorage.setItem(
+STORAGE.chats,
+JSON.stringify(chats)
+);
+
+localStorage.setItem(
+STORAGE.memory,
+JSON.stringify(memories)
+);
+
+localStorage.setItem(
+STORAGE.current,
+current
+);
+
+}
+
+
+function createChat(){
+
+const chat={
+
+id:
+Date.now()+"_"+Math.random(),
+
+title:
+"Neuer Chat",
+
+messages:[],
+
+updated:
+Date.now()
+
+};
+
+chats.unshift(chat);
+
+current=
+chat.id;
+
+save();
+
+return chat;
+
+}
+
+
+if(!chats.length){
+
+createChat();
+
+}
+
+
+if(
+!chats.find(
+x=>x.id===current
+)
+){
+
+current=
+chats[0].id;
+
+}
+
+
+function getChat(){
+
+return chats.find(
+x=>x.id===current
+);
+
+}
+
+
+function render(){
+
+renderChats();
+
+renderMessages();
+
+}
+
+
+function renderChats(){
+
+const list=
+document.getElementById(
+"chatList"
+);
+
+list.innerHTML="";
+
+
+[...chats]
+.sort(
+(a,b)=>b.updated-a.updated
+)
+.forEach(
+chat=>{
+
+const row=
+document.createElement(
+"div"
+);
+
+row.className=
+"chat"+
+(
+chat.id===current
+?" active"
+:""
+);
+
+
+const select=
+document.createElement(
+"button"
+);
+
+select.className=
+"chatSelect";
+
+
+const title=
+document.createElement(
+"div"
+);
+
+title.className=
+"chatTitle";
+
+title.textContent=
+chat.title;
+
+
+const count=
+document.createElement(
+"div"
+);
+
+count.className=
+"chatCount";
+
+count.textContent=
+chat.messages.length+
+" Nachrichten";
+
+
+select.appendChild(
+title
+);
+
+select.appendChild(
+count
+);
+
+
+select.onclick=()=>{
+
+current=
+chat.id;
+
+save();
+
+render();
+
+};
+
+
+const rename=
+document.createElement(
+"button"
+);
+
+rename.className=
+"chatButton";
+
+rename.textContent=
+"✎";
+
+
+rename.onclick=()=>{
+
+const name=
+prompt(
+"Chat umbenennen:",
+chat.title
+);
+
+if(name&&name.trim()){
+
+chat.title=
+name.trim();
+
+chat.updated=
+Date.now();
+
+save();
+
+render();
+
+}
+
+};
+
+
+const remove=
+document.createElement(
+"button"
+);
+
+remove.className=
+"chatButton delete";
+
+remove.textContent=
+"×";
+
+
+remove.onclick=()=>{
+
+if(
+!confirm(
+"Diesen Chat löschen?"
+)
+){
+
+return;
+
+}
+
+
+chats=
+chats.filter(
+x=>x.id!==chat.id
+);
+
+
+if(
+chat.id===current
+){
+
+if(chats.length){
+
+current=
+chats[0].id;
+
+}else{
+
+createChat();
+
+}
+
+}
+
+
+save();
+
+render();
+
+};
+
+
+row.appendChild(
+select
+);
+
+row.appendChild(
+rename
+);
+
+row.appendChild(
+remove
+);
+
+list.appendChild(
+row
+);
+
+});
+
+}
+
+
+function renderMessages(){
+
+const box=
+document.getElementById(
+"messages"
+);
+
+box.innerHTML="";
+
+
+const chat=
+getChat();
+
+
+if(!chat.messages.length){
+
+box.innerHTML=`
+
+<div class="welcome">
+
+<h1>
+Wie kann ich helfen?
+</h1>
+
+<div>
+Dein persönlicher KI-Assistent
+</div>
+
+</div>
+
+`;
+
+return;
+
+}
+
+
+chat.messages.forEach(
+message=>{
+
+const div=
+document.createElement(
+"div"
+);
+
+div.className=
+"message "+
+(
+message.role==="user"
+?"user"
+:"nova"
+);
+
+div.textContent=
+message.text;
+
+box.appendChild(
+div
+);
+
+});
+
+
+box.scrollTop=
+box.scrollHeight;
+
+}
+
+
+function addMemory(text){
+
+text=
+text.trim();
+
+
+if(!text){
+
+return false;
+
+}
+
+
+if(
+memories.some(
+x=>
+x.toLowerCase()===
+text.toLowerCase()
+)
+){
+
+return false;
+
+}
+
+
+memories.unshift(
+text
+);
+
+memories=
+memories.slice(
+0,
+100
+);
+
+save();
+
+return true;
+
+}
+
+
+function openSettings(){
+
+const panel=
+document.getElementById(
+"panel"
+);
+
+panel.classList.add(
+"open"
+);
+
+
+const content=
+document.getElementById(
+"panelContent"
+);
+
+
+content.innerHTML=`
+
+<div class="section">
+
+<b>
+🧠 Memory
+</b>
+
+<div class="description">
+Diese Informationen bleiben auch bei neuen Chats erhalten.
+</div>
+
+<div class="memoryForm">
+
+<input
+id="memoryInput"
+placeholder="z. B. Ich mag Fußball"
+maxlength="500"
+>
+
+<button id="memorySave">
+Merken
+</button>
+
+</div>
+
+<div id="memoryList"></div>
+
+</div>
+
+
+<div class="section">
+
+<b>
+🤖 KI
+</b>
+
+<div class="description">
+NOVA verwendet deine Open-Source-KI über Hugging Face.
+Der HF_TOKEN bleibt ausschließlich auf dem Server.
+</div>
+
+</div>
+
+
+<div class="section">
+
+<button
+class="danger"
+id="clearChats"
+>
+Alle Chats löschen
+</button>
+
+<br>
+
+<button
+class="danger"
+id="clearMemory"
+>
+Memory löschen
+</button>
+
+</div>
+
+`;
+
+
+renderMemory();
+
+
+document
+.getElementById(
+"memorySave"
+)
+.onclick=()=>{
+
+const input=
+document.getElementById(
+"memoryInput"
+);
+
+if(
+addMemory(
+input.value
+)
+){
+
+input.value="";
+
+renderMemory();
+
+}
+
+};
+
+
+document
+.getElementById(
+"clearChats"
+)
+.onclick=()=>{
+
+if(
+confirm(
+"Wirklich alle Chats löschen?"
+)
+){
+
+chats=[];
+
+createChat();
+
+save();
+
+render();
+
+panel.classList.remove(
+"open"
+);
+
+}
+
+};
+
+
+document
+.getElementById(
+"clearMemory"
+)
+.onclick=()=>{
+
+if(
+confirm(
+"Memory komplett löschen?"
+)
+){
+
+memories=[];
+
+save();
+
+renderMemory();
+
+}
+
+};
+
+}
+
+
+function renderMemory(){
+
+const list=
+document.getElementById(
+"memoryList"
+);
+
+if(!list){
+
+return;
+
+}
+
+
+list.innerHTML="";
+
+
+memories.forEach(
+(memory,index)=>{
+
+const row=
+document.createElement(
+"div"
+);
+
+row.className=
+"memory";
+
+
+const text=
+document.createElement(
+"span"
+);
+
+text.textContent=
+memory;
+
+
+const remove=
+document.createElement(
+"button"
+);
+
+remove.textContent=
+"×";
+
+
+remove.onclick=()=>{
+
+memories.splice(
+index,
+1
+);
+
+save();
+
+renderMemory();
+
+};
+
+
+row.appendChild(
+text
+);
+
+row.appendChild(
+remove
+);
+
+list.appendChild(
+row
+);
+
+});
+
+}
+
+
+async function sendMessage(text){
+
+const chat=
+getChat();
+
+
+chat.messages.push({
+
+role:"user",
+
+text:text,
+
+time:Date.now()
+
+});
+
+
+if(
+chat.title===
+"Neuer Chat"
+){
+
+chat.title=
+text
+.replace(
+/\s+/g,
+" "
+)
+.substring(
+0,
+45
+);
+
+}
+
+
+chat.updated=
+Date.now();
+
+save();
+
+render();
+
+
+const memoryCommand=
+text.match(
+/^(?:merk dir|merke dir|speichere dir|vergiss nicht)\s*:?\s*(.+)$/i
+);
+
+
+if(memoryCommand){
+
+const saved=
+addMemory(
+memoryCommand[1]
+);
+
+
+chat.messages.push({
+
+role:"nova",
+
+text:
+saved
+?
+"Verstanden. Ich habe mir das gemerkt. 🧠"
+:
+"Das habe ich bereits gespeichert."
+
+});
+
+chat.updated=
+Date.now();
+
+save();
+
+render();
+
+return;
+
+}
+
+
+const loading=
+document.createElement(
+"div"
+);
+
+loading.className=
+"message nova";
+
+loading.textContent=
+"NOVA denkt…";
+
+document
+.getElementById(
+"messages"
+)
+.appendChild(
+loading
+);
+
+
+try{
+
+const response=
+await fetch(
+"/api/chat",
+{
+
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+body:
+JSON.stringify({
+
+message:text,
+
+history:
+chat.messages
+.slice(-20),
+
+memories:
+memories
+
+})
+
+}
+);
+
+
+let data;
+
+
+try{
+
+data=
+await response.json();
+
+}catch{
+
+throw new Error(
+"Ungültige Antwort vom Server."
+);
+
+}
+
+
+if(!response.ok){
+
+throw new Error(
+data.error||
+"Die KI konnte nicht antworten."
+);
+
+}
+
+
+if(
+!data.answer
+){
+
+throw new Error(
+"Die KI hat keine Antwort geliefert."
+);
+
+}
+
+
+chat.messages.push({
+
+role:"nova",
+
+text:data.answer,
+
+time:Date.now()
+
+});
+
+
+}catch(error){
+
+chat.messages.push({
+
+role:"nova",
+
+text:
+"Entschuldigung — "+
+error.message,
+
+time:Date.now()
+
+});
+
+}
+
+
+chat.updated=
+Date.now();
+
+save();
+
+render();
+
+}
+
+
+document
+.getElementById(
+"form"
+)
+.onsubmit=
+event=>{
+
+event.preventDefault();
+
+
+const input=
+document.getElementById(
+"input"
+);
+
+
+const text=
+input.value.trim();
+
+
+if(!text){
+
+return;
+
+}
+
+
+input.value="";
+
+
+sendMessage(
+text
+);
+
+};
+
+
+document
+.getElementById(
+"newChat"
+)
+.onclick=
+()=>{
+
+createChat();
+
+render();
+
+};
+
+
+document
+.getElementById(
+"mobileNew"
+)
+.onclick=
+()=>{
+
+createChat();
+
+render();
+
+};
+
+
+document
+.getElementById(
+"settings"
+)
+.onclick=
+openSettings;
+
+
+document
+.getElementById(
+"mobileSettings"
+)
+.onclick=
+openSettings;
+
+
+document
+.getElementById(
+"close"
+)
+.onclick=
+()=>{
+
+document
+.getElementById(
+"panel"
+)
+.classList.remove(
+"open"
+);
+
+};
+
+
+document
+.getElementById(
+"mobileChats"
+)
+.onclick=
+()=>{
+
+if(!chats.length){
+
+return;
+
+}
+
+
+const text=
+chats
+.map(
+(chat,index)=>
+(index+1)+
+". "+
+chat.title
+)
+.join(
+"\n"
+);
+
+
+const choice=
+prompt(
+"Deine Chats:\n\n"+
+text+
+"\n\nNummer eingeben:"
+);
+
+
+const index=
+Number(choice)-1;
+
+
+if(
+Number.isInteger(index)&&
+chats[index]
+){
+
+current=
+chats[index].id;
+
+save();
+
+render();
+
+}
+
+};
+
+
+document
+.getElementById(
+"panel"
+)
+.onclick=
+event=>{
+
+if(
+event.target.id===
+"panel"
+){
+
+event.currentTarget
+.classList.remove(
+"open"
+);
+
+}
+
+};
+
+
+save();
+
+render();
+
+</script>
+
+</body>
+</html>
