@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOVA</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at center, #17233d 0%, #080b13 45%, #030407 100%);
+      color: white;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Header */
+
+    header {
+      width: 100%;
+      padding: 22px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 25px;
+      font-weight: 700;
+      letter-spacing: 5px;
+    }
+
+    .status {
+      font-size: 12px;
+      color: #7dffcc;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #7dffcc;
+      box-shadow: 0 0 12px #7dffcc;
+    }
+
+    /* Main */
+
+    main {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 70px;
+    }
+
+    .greeting {
+      text-align: center;
+      margin-bottom: 45px;
+    }
+
+    .greeting h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .greeting p {
+      color: #8791a6;
+      font-size: 15px;
+    }
+
+    /* NOVA Core */
+
+    .core-wrapper {
+      position: relative;
+      width: 230px;
+      height: 230px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring {
+      position: absolute;
+      border: 1px solid rgba(120, 210, 255, 0.35);
+      border-radius: 50%;
+      animation: rotate 8s linear infinite;
+    }
+
+    .ring.one {
+      width: 210px;
+      height: 210px;
+    }
+
+    .ring.two {
+      width: 170px;
+      height: 170px;
+      animation-direction: reverse;
+      animation-duration: 6s;
+    }
+
+    .ring.three {
+      width: 130px;
+      height: 130px;
+      animation-duration: 4s;
+    }
+
+    .core {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 0%, #9be7ff 18%, #348fff 48%, #101a38 75%);
+      box-shadow:
+        0 0 25px #4db8ff,
+        0 0 60px rgba(77, 184, 255, 0.5),
+        0 0 110px rgba(77, 184, 255, 0.25);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(0.92);
+      }
+
+      50% {
+        transform: scale(1.08);
+      }
+    }
+
+    @keyframes rotate {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Microphone */
+
+    .mic-button {
+      margin-top: 55px;
+      width: 75px;
+      height: 75px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      color: white;
+      font-size: 27px;
+      cursor: pointer;
+      backdrop-filter: blur(15px);
+      transition: 0.25s;
+    }
+
+    .mic-button:hover {
+      transform: scale(1.08);
+      background: rgba(255,255,255,0.12);
+    }
+
+    .mic-button.active {
+      box-shadow: 0 0 35px rgba(90,180,255,0.7);
+      transform: scale(1.08);
+    }
+
+    .instruction {
+      margin-top: 15px;
+      color: #687389;
+      font-size: 12px;
+    }
+
+    /* Bottom navigation */
+
+    nav {
+      width: 100%;
+      padding: 18px 20px 28px;
+      display: flex;
+      justify-content: center;
+      gap: 45px;
+    }
+
+    nav button {
+      background: none;
+      border: none;
+      color: #687389;
+      font-size: 22px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    nav button:hover {
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* Responsive */
+
+    @media (max-width: 400px) {
+      .greeting h1 {
+        font-size: 27px;
+      }
+
+      .core-wrapper {
+        transform: scale(0.9);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <header>
+      <div class="logo">NOVA</div>
+
+      <div class="status">
+        <span class="status-dot"></span>
+        ONLINE
+      </div>
+    </header>
+
+    <main>
+
+      <div class="greeting">
+        <h1>Wie kann ich helfen?</h1>
+        <p>Dein persönlicher KI-Assistent</p>
+      </div>
+
+      <div class="core-wrapper">
+
+        <div class="ring one"></div>
+        <div class="ring two"></div>
+        <div class="ring three"></div>
+
+        <div class="core"></div>
+
+      </div>
+
+      <button class="mic-button" id="micButton">
+        🎙️
+      </button>
+
+      <div class="instruction" id="instruction">
+        Tippe auf das Mikrofon
+      </div>
+
+    </main>
+
+    <nav>
+      <button>⌂</button>
+      <button>💬</button>
+      <button>⚙️</button>
+    </nav>
+
+  </div>
+
+  <script>
+
+    const micButton = document.getElementById("micButton");
+    const instruction = document.getElementById("instruction");
+
+    let listening = false;
+
+    micButton.addEventListener("click", () => {
+
+      listening = !listening;
+
+      if (listening) {
+
+        micButton.classList.add("active");
+        instruction.textContent = "NOVA hört zu...";
+
+      } else {
+
+        micButton.classList.remove("active");
+        instruction.textContent = "Tippe auf das Mikrofon";
+
+      }
+
+    });
+
+  </script>
+
+</body>
+</html>
