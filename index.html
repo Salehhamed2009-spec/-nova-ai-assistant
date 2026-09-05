@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#05070b"
+  >
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent"
+  >
+
+  <meta
+    name="apple-mobile-web-app-title"
+    content="NOVA"
+  >
+
+  <title>NOVA</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #05070b;
+      --panel: rgba(12, 16, 24, 0.92);
+      --panel-light: rgba(255, 255, 255, 0.045);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f4f7fb;
+      --muted: #8d96a6;
+      --accent: #8de7ff;
+      --accent-soft: rgba(141, 231, 255, 0.12);
+      --danger: #ff718f;
+      --online: #55e6a5;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Display",
+        "SF Pro Text",
+        Inter,
+        Arial,
+        sans-serif;
+    }
+
+    body {
+      min-height: 100dvh;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background:
+        radial-gradient(
+          circle at 50% 18%,
+          rgba(141, 231, 255, 0.07),
+          transparent 35%
+        ),
+        var(--bg);
+    }
+
+    /* =========================
+       TOP BAR
+    ========================= */
+
+    .topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+
+      height: calc(64px + env(safe-area-inset-top));
+      padding:
+        env(safe-area-inset-top)
+        14px
+        0
+        14px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      background: rgba(5, 7, 11, 0.72);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-orb {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+
+      border: 1px solid rgba(141, 231, 255, 0.5);
+
+      background:
+        radial-gradient(
+          circle,
+          rgba(141, 231, 255, 0.35),
+          rgba(141, 231, 255, 0.02) 65%
+        );
+
+      box-shadow:
+        0 0 18px rgba(141, 231, 255, 0.18),
+        inset 0 0 12px rgba(141, 231, 255, 0.12);
+
+      position: relative;
+    }
+
+    .brand-orb::after {
+      content: "";
+      position: absolute;
+      inset: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 15px var(--accent);
+      opacity: 0.75;
+    }
+
+    .brand-name {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 3px;
+    }
+
+    .brand-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 2px;
+
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .online {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .online span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--online);
+      box-shadow: 0 0 8px var(--online);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-button {
+      width: 40px;
+      height: 40px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 13px;
+      color: var(--text);
+      background: transparent;
+
+      font-size: 19px;
+
+      transition:
+        background 0.2s,
+        transform 0.2s;
+    }
+
+    .icon-button:active {
+      transform: scale(0.92);
+      background: var(--panel-light);
+    }
+
+    /* =========================
+       SIDEBAR
+    ========================= */
+
+    .sidebar {
+      position: fixed;
+      z-index: 50;
+
+      top: 0;
+      bottom: 0;
+      left: 0;
+
+      width: min(310px, 88vw);
+
+      padding:
+        calc(78px + env(safe-area-inset-top))
+        12px
+        calc(20px + env(safe-area-inset-bottom));
+
+      background: rgba(8, 11, 17, 0.97);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+
+      border-right: 1px solid var(--border);
+
+      transform: translateX(-105%);
+      transition: transform 0.28s ease;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-title {
+      padding: 8px 10px 14px;
+
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .new-chat {
+      width: 100%;
+      height: 46px;
+
+      margin-bottom: 14px;
+
+      border-radius: 14px;
+
+      color: var(--text);
+      background: var(--accent-soft);
+
+      border: 1px solid rgba(141, 231, 255, 0.14);
+
+      text-align: left;
+      padding: 0 15px;
+
+      font-weight: 600;
+    }
+
+    .chat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      overflow-y: auto;
+      max-height: calc(100% - 100px);
+    }
+
+    .chat {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 3px;
+
+      border-radius: 13px;
+      overflow: hidden;
+
+      background: transparent;
+    }
+
+    .chat.active {
+      background: var(--panel-light);
+    }
+
+    .chatSelect {
+      min-width: 0;
+
+      padding: 11px;
+      color: var(--text);
+      background: transparent;
+      text-align: left;
+    }
+
+    .chatTitle {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .chatCount {
+      margin-top: 3px;
+
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .chatButton {
+      width: 35px;
+      color: var(--muted);
+      background: transparent;
+      font-size: 16px;
+    }
+
+    .chatButton.delete {
+      color: var(--danger);
+    }
+
+    /* =========================
+       MAIN
+    ========================= */
+
+    .main {
+      position: absolute;
+      inset: 0;
+
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex: 1;
+
+      width: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+
+      padding:
+        calc(88px + env(safe-area-inset-top))
+        14px
+        120px;
+
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .messages::-webkit-scrollbar,
+    .chat-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* =========================
+       WELCOME / JARVIS
+    ========================= */
+
+    .welcome {
+      min-height: 70vh;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      text-align: center;
+    }
+
+    .welcome-orb {
+      width: 118px;
+      height: 118px;
+
+      margin-bottom: 28px;
+
+      border-radius: 50%;
+
+      border: 1px solid rgba(141, 231, 255, 0.4);
+
+      background:
+        radial-gradient(
+          circle,
+          rgba(141, 231, 255, 0.22),
+          rgba(141, 231, 255, 0.025) 65%
+        );
+
+      box-shadow:
+        0 0 50px rgba(141, 231, 255, 0.1),
+        inset 0 0 35px rgba(141, 231, 255, 0.08);
+
+      animation: breathe 4s ease-in-out infinite;
+
+      position: relative;
+    }
+
+    .welcome-orb::before,
+    .welcome-orb::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(141, 231, 255, 0.16);
+    }
+
+    .welcome-orb::before {
+      inset: 14px;
+    }
+
+    .welcome-orb::after {
+      inset: 31px;
+      background: rgba(141, 231, 255, 0.08);
+    }
+
+    @keyframes breathe {
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 0.85;
+      }
+
+      50% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    .welcome h1 {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.8px;
+    }
+
+    .welcome > div {
+      margin-top: 8px;
+
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* =========================
+       MESSAGES
+    ========================= */
+
+    .message {
+      width: fit-content;
+      max-width: 88%;
+
+      margin: 8px 0;
+
+      padding: 12px 14px;
+
+      border-radius: 18px;
+
+      font-size: 15px;
+      line-height: 1.5;
+
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .message.user {
+      margin-left: auto;
+
+      color: #061017;
+      background: var(--accent);
+
+      border-bottom-right-radius: 5px;
+    }
+
+    .message.nova {
+      margin-right: auto;
+
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.055);
+
+      border: 1px solid var(--border);
+
+      border-bottom-left-radius: 5px;
+    }
+
+    .message.loading {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 14px 16px;
+    }
+
+    .message.loading span {
+      animation: pulse 1.2s infinite;
+      opacity: 0.4;
+    }
+
+    .message.loading span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .message.loading span:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        opacity: 0.25;
+      }
+
+      50% {
+        opacity: 1;
+      }
+    }
+
+    /* =========================
+       INPUT
+    ========================= */
+
+    .composer {
+      position: absolute;
+
+      left: 12px;
+      right: 12px;
+      bottom: calc(10px + env(safe-area-inset-bottom));
+
+      z-index: 15;
+    }
+
+    .form {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+
+      padding: 7px;
+
+      border-radius: 22px;
+
+      background: rgba(16, 21, 30, 0.94);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+
+      border: 1px solid var(--border);
+
+      box-shadow:
+        0 15px 45px rgba(0, 0, 0, 0.35);
+    }
+
+    .input {
+      flex: 1;
+
+      min-width: 0;
+      min-height: 42px;
+      max-height: 130px;
+
+      resize: none;
+
+      padding: 11px 10px;
+
+      outline: none;
+      border: 0;
+
+      color: var(--text);
+      background: transparent;
+
+      font-size: 15px;
+    }
+
+    .input::placeholder {
+      color: #707988;
+    }
+
+    .send {
+      flex: 0 0 42px;
+
+      width: 42px;
+      height: 42px;
+
+      border-radius: 14px;
+
+      color: #061017;
+      background: var(--accent);
+
+      font-size: 18px;
+      font-weight: 700;
+
+      transition:
+        transform 0.2s,
+        opacity 0.2s;
+    }
+
+    .send:active {
+      transform: scale(0.9);
+    }
+
+    /* =========================
+       SETTINGS PANEL
+    ========================= */
+
+    .panel {
+      position: fixed;
+      inset: 0;
+
+      z-index: 100;
+
+      display: flex;
+      justify-content: flex-end;
+
+      background: rgba(0, 0, 0, 0.55);
+
+      opacity: 0;
+      pointer-events: none;
+
+      transition: opacity 0.25s;
+    }
+
+    .panel.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .panel-inner {
+      width: min(100%, 390px);
+      height: 100%;
+
+      padding:
+        calc(20px + env(safe-area-inset-top))
+        18px
+        calc(25px + env(safe-area-inset-bottom));
+
+      overflow-y: auto;
+
+      background: #090d14;
+
+      border-left: 1px solid var(--border);
+
+      transform: translateX(100%);
+      transition: transform 0.28s ease;
+    }
+
+    .panel.open .panel-inner {
+      transform: translateX(0);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 25px;
+    }
+
+    .panel-header h2 {
+      font-size: 22px;
+    }
+
+    .section {
+      padding: 17px 0;
+
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section b {
+      display: block;
+      margin-bottom: 7px;
+
+      font-size: 15px;
+    }
+
+    .description {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .memoryForm {
+      display: flex;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .memoryForm input {
+      flex: 1;
+      min-width: 0;
+
+      padding: 10px;
+
+      border-radius: 10px;
+      border: 1px solid var(--border);
+
+      outline: none;
+
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .memoryForm button {
+      padding: 0 13px;
+
+      border-radius: 10px;
+
+      color: #061017;
+      background: var(--accent);
+
+      font-weight: 600;
+    }
+
+    .memory {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+
+      margin-top: 8px;
+      padding: 10px;
+
+      border-radius: 10px;
+
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .memory span {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .memory button {
+      flex: 0 0 auto;
+
+      color: var(--danger);
+      background: transparent;
+
+      font-size: 16px;
+    }
+
+    .danger {
+      width: 100%;
+      padding: 12px;
+
+      border-radius: 11px;
+
+      color: var(--danger);
+      background: rgba(255, 113, 143, 0.08);
+
+      border: 1px solid rgba(255, 113, 143, 0.15);
+    }
+
+    /* =========================
+       DESKTOP NICHT ALS PC UI
+       Nur etwas mehr Platz.
+    ========================= */
+
+    @media (min-width: 700px) {
+      .messages {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      .composer {
+        max-width: 700px;
+        left: 50%;
+        right: auto;
+        width: calc(100% - 24px);
+        transform: translateX(-50%);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
+
+    <aside class="sidebar">
+
+      <div class="sidebar-title">
+        Deine Chats
+      </div>
+
+      <button
+        id="newChat"
+        class="new-chat"
+        type="button"
+      >
+        ＋ Neuer Chat
+      </button>
+
+      <div
+        id="chatList"
+        class="chat-list"
+      ></div>
+
+    </aside>
+
+
+    <!-- =========================
+         TOPBAR
+    ========================== -->
+
+    <header class="topbar">
+
+      <div class="brand">
+
+        <div class="brand-orb"></div>
+
+        <div>
+          <div class="brand-name">
+            NOVA
+          </div>
+
+          <div class="brand-status">
+            <span class="online">
+              <span></span>
+              ONLINE
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="top-actions">
+
+        <button
+          id="mobileChats"
+          class="icon-button"
+          type="button"
+          aria-label="Chats"
+        >
+          ☰
+        </button>
+
+        <button
+          id="mobileNew"
+          class="icon-button"
+          type="button"
+          aria-label="Neuer Chat"
+        >
+          ＋
+        </button>
+
+        <button
+          id="mobileSettings"
+          class="icon-button"
+          type="button"
+          aria-label="Einstellungen"
+        >
+          ⚙
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <!-- =========================
+         MAIN CHAT
+    ========================== -->
+
+    <main class="main">
+
+      <div
+        id="messages"
+        class="messages"
+      >
+
+        <div class="welcome">
+
+          <div class="welcome-orb"></div>
+
+          <h1>
+            Wie kann ich helfen?
+          </h1>
+
+          <div>
+            Dein persönlicher KI-Assistent
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =========================
+           MESSAGE INPUT
+      ========================== -->
+
+      <div class="composer">
+
+        <form
+          id="form"
+          class="form"
+        >
+
+          <textarea
+            id="input"
+            class="input"
+            rows="1"
+            maxlength="10000"
+            placeholder="Nachricht an NOVA..."
+            autocomplete="off"
+            spellcheck="true"
+          ></textarea>
+
+          <button
+            class="send"
+            type="submit"
+            aria-label="Nachricht senden"
+          >
+            ↑
+          </button>
+
+        </form>
+
+      </div>
+
+    </main>
+
+
+    <!-- =========================
+         SETTINGS
+    ========================== -->
+
+    <div
+      id="panel"
+      class="panel"
+    >
+
+      <div class="panel-inner">
+
+        <div class="panel-header">
+
+          <h2>
+            Einstellungen
+          </h2>
+
+          <button
+            id="close"
+            class="icon-button"
+            type="button"
+            aria-label="Schließen"
+          >
+            ×
+          </button>
+
+        </div>
+
+        <div id="panelContent"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- EINZIGER JAVASCRIPT-EINSTIEGSPUNKT -->
+  <script
+    type="module"
+    src="/js/app.js"
+  ></script>
+
+</body>
+</html>
