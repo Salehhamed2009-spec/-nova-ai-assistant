@@ -1,52 +1,43 @@
+/**
+ * NOVA API Client
+ * Verbindung zum NOVA KI-Backend
+ */
+
 import CONFIG from '../config.js';
 
-class APIClient {
+class ApiClient {
   constructor() {
-    this.endpoint = CONFIG.API.CHAT_ENDPOINT;
-    this.timeout = CONFIG.API.TIMEOUT || 60000;
+    this.endpoint =
+      CONFIG.API?.CHAT_ENDPOINT || '/api/chat';
+
+    this.timeout =
+      CONFIG.API?.TIMEOUT || 60000;
   }
 
-  async healthCheck() {
-    try {
-      const controller = new AbortController();
+  async sendMessage({
+    message,
+    history = [],
+    memories = []
+  }) {
+    if (
+      typeof message !== 'string' ||
+      !message.trim()
+    ) {
+      throw new Error('Nachricht ist leer.');
+    }
 
-      const timeout = setTimeout(
+    const controller =
+      new AbortController();
+
+    const timeoutId =
+      setTimeout(
         () => controller.abort(),
-        5000
+        this.timeout
       );
-
-      const response = await fetch(
-        this.endpoint,
-        {
-          method: 'GET',
-          signal: controller.signal
-        }
-      );
-
-      clearTimeout(timeout);
-
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  async chat(message, history = [], memories = []) {
-    if (!message || typeof message !== 'string') {
-      throw new Error('Keine Nachricht angegeben.');
-    }
-
-    const controller = new AbortController();
-
-    const timeout = setTimeout(
-      () => controller.abort(),
-      this.timeout
-    );
 
     try {
-      const response = await fetch(
-        this.endpoint,
-        {
+      const response =
+        await fetch(this.endpoint, {
           method: 'POST',
 
           headers: {
@@ -54,57 +45,49 @@ class APIClient {
           },
 
           body: JSON.stringify({
-            message,
-            history,
-            memories
+            message: message.trim(),
+            history: Array.isArray(history)
+              ? history
+              : [],
+            memories: Array.isArray(memories)
+              ? memories
+              : []
           }),
 
           signal: controller.signal
-        }
-      );
+        });
+
+      let data = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          `Backend hat keine gültige JSON-Antwort geliefert. HTTP ${response.status}`
+        );
+      }
 
       if (!response.ok) {
-        let errorMessage =
-          `Serverfehler (${response.status})`;
-
-        try {
-          const errorData =
-            await response.json();
-
-          if (errorData?.error) {
-            errorMessage =
-              errorData.error;
-          }
-        } catch {}
-
-        throw new Error(errorMessage);
+        throw new Error(
+          data?.error ||
+          data?.message ||
+          `Backend-Fehler: HTTP ${response.status}`
+        );
       }
 
-      const data =
-        await response.json();
-
-      if (typeof data === 'string') {
-        return data;
+      if (
+        data?.error &&
+        !data?.answer &&
+        !data?.message &&
+        !data?.response &&
+        !data?.content
+      ) {
+        throw new Error(data.error);
       }
 
-      if (data?.reply) {
-        return data.reply;
-      }
-
-      if (data?.response) {
-        return data.response;
-      }
-
-      if (data?.message) {
-        return data.message;
-      }
-
-      throw new Error(
-        'Die KI hat keine gültige Antwort zurückgegeben.'
-      );
+      return data;
 
     } catch (error) {
-
       if (error.name === 'AbortError') {
         throw new Error(
           'Die Anfrage hat zu lange gedauert.'
@@ -114,9 +97,42 @@ class APIClient {
       throw error;
 
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
     }
+  }
+
+  async healthCheck() {
+    const response =
+      await fetch(this.endpoint, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json'
+        },
+        cache: 'no-store'
+      });
+
+    let data = null;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(
+        `Backend antwortet nicht mit gültigem JSON. HTTP ${response.status}`
+      );
+    }
+
+    if (!response.ok || data?.ok === false) {
+      throw new Error(
+        data?.error ||
+        `Backend nicht erreichbar. HTTP ${response.status}`
+      );
+    }
+
+    return data;
   }
 }
 
-export default new APIClient();
+const apiClient = new ApiClient();
+
+export default apiClient;
+export { ApiClient };
