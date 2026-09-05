@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#05070d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <title>NOVA — AI Assistant</title>
+
+  <style>
+    :root {
+      --bg: #05070d;
+      --bg-soft: #0a0f1c;
+      --panel: rgba(13, 19, 32, 0.78);
+      --panel-strong: rgba(17, 24, 40, 0.94);
+      --border: rgba(255, 255, 255, 0.09);
+
+      --text: #f7f9ff;
+      --muted: #8994aa;
+
+      --blue: #63c8ff;
+      --purple: #8b7cff;
+      --green: #65efb1;
+      --red: #ff718f;
+
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+    }
+
+    .app {
+      position: relative;
+      min-height: 100dvh;
+      overflow: hidden;
+      background:
+        radial-gradient(
+          circle at 50% 22%,
+          rgba(73, 151, 255, 0.16),
+          transparent 30%
+        ),
+        radial-gradient(
+          circle at 10% 90%,
+          rgba(139, 124, 255, 0.10),
+          transparent 28%
+        ),
+        var(--bg);
+    }
+
+    /* Background */
+
+    .grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.45;
+      background-image:
+        linear-gradient(
+          rgba(255,255,255,0.018) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(255,255,255,0.018) 1px,
+          transparent 1px
+        );
+      background-size: 38px 38px;
+      mask-image: linear-gradient(
+        to bottom,
+        black 0%,
+        transparent 88%
+      );
+    }
+
+    .ambient {
+      position: fixed;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: rgba(70, 163, 255, 0.08);
+      filter: blur(80px);
+      pointer-events: none;
+      left: 50%;
+      top: 25%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Header */
+
+    header {
+      position: relative;
+      z-index: 5;
+
+      width: 100%;
+      height: 74px;
+
+      padding:
+        env(safe-area-inset-top)
+        20px
+        0
+        20px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 6px;
+    }
+
+    .online {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+    }
+
+    .online-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 15px var(--green);
+    }
+
+    /* Main */
+
+    main {
+      position: relative;
+      z-index: 2;
+
+      min-height: calc(100dvh - 136px);
+
+      padding:
+        20px
+        20px
+        105px;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .welcome {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+
+    .welcome h1 {
+      font-size: clamp(28px, 8vw, 43px);
+      line-height: 1.05;
+      letter-spacing: -1.7px;
+      font-weight: 750;
+    }
+
+    .welcome p {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* NOVA Core */
+
+    .core-container {
+      position: relative;
+
+      width: min(78vw, 310px);
+      height: min(78vw, 310px);
+
+      display: grid;
+      place-items: center;
+
+      margin: 0 auto;
+    }
+
+    .core-ring {
+      position: absolute;
+
+      border-radius: 50%;
+      border: 1px solid rgba(99, 200, 255, 0.22);
+
+      inset: 9%;
+
+      animation:
+        rotate 12s linear infinite;
+    }
+
+    .core-ring::after {
+      content: "";
+
+      position: absolute;
+
+      width: 7px;
+      height: 7px;
+
+      top: 3%;
+      left: 50%;
+
+      transform: translateX(-50%);
+
+      border-radius: 50%;
+
+      background: var(--blue);
+
+      box-shadow:
+        0 0 12px var(--blue),
+        0 0 25px rgba(99, 200, 255, 0.5);
+    }
+
+    .core-ring.two {
+      inset: 20%;
+
+      border-color: rgba(139, 124, 255, 0.25);
+
+      animation-duration: 8s;
+      animation-direction: reverse;
+    }
+
+    .core-ring.three {
+      inset: 31%;
+
+      animation-duration: 5s;
+    }
+
+    .core {
+      position: relative;
+
+      width: 25%;
+      aspect-ratio: 1;
+
+      border-radius: 50%;
+
+      background:
+        radial-gradient(
+          circle at 35% 30%,
+          #ffffff 0%,
+          #c8f1ff 14%,
+          #67c9ff 37%,
+          #3154a0 65%,
+          #111a38 76%,
+          transparent 78%
+        );
+
+      box-shadow:
+        0 0 25px rgba(99, 200, 255, 0.95),
+        0 0 65px rgba(99, 200, 255, 0.42),
+        0 0 120px rgba(139, 124, 255, 0.22);
+
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+
+    .core::before {
+      content: "";
+
+      position: absolute;
+      inset: -45%;
+
+      border-radius: 50%;
+
+      border: 1px solid rgba(99, 200, 255, 0.08);
+
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+
+    .listening .core {
+      animation: listeningPulse 0.75s ease-in-out infinite;
+
+      box-shadow:
+        0 0 30px #ffffff,
+        0 0 70px rgba(99, 200, 255, 0.75),
+        0 0 130px rgba(139, 124, 255, 0.4);
+    }
+
+    .thinking .core {
+      animation: thinkingPulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes rotate {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes breathe {
+      0%,
+      100% {
+        transform: scale(0.94);
+      }
+
+      50% {
+        transform: scale(1.08);
+      }
+    }
+
+    @keyframes listeningPulse {
+      0%,
+      100% {
+        transform: scale(0.9);
+      }
+
+      50% {
+        transform: scale(1.17);
+      }
+    }
+
+    @keyframes thinkingPulse {
+      0%,
+      100% {
+        transform: scale(0.94) rotate(0deg);
+      }
+
+      50% {
+        transform: scale(1.08) rotate(180deg);
+      }
+    }
+
+    /* State */
+
+    .state {
+      height: 20px;
+
+      color: var(--muted);
+
+      font-size: 12px;
+      font-weight: 500;
+
+      margin-top: -3px;
+      margin-bottom: 17px;
+
+      transition: color 0.2s;
+    }
+
+    .listening .state {
+      color: var(--blue);
+    }
+
+    .thinking .state {
+      color: var(--purple);
+    }
+
+    /* Controls */
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .mic {
+      width: 74px;
+      height: 74px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 50%;
+
+      background: rgba(255,255,255,0.055);
+
+      border: 1px solid var(--border);
+
+      backdrop-filter: blur(20px);
+
+      font-size: 25px;
+
+      cursor: pointer;
+
+      box-shadow:
+        0 14px 45px rgba(0,0,0,0.3);
+
+      transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+    }
+
+    .mic:active {
+      transform: scale(0.92);
+    }
+
+    .listening .mic {
+      background: rgba(99, 200, 255, 0.13);
+
+      border-color: rgba(99, 200, 255, 0.45);
+
+      box-shadow:
+        0 0 35px rgba(99, 200, 255, 0.32);
+    }
+
+    .hint {
+      color: #667188;
+      font-size: 11px;
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+
+      max-width: 360px;
+    }
+
+    .quick {
+      padding: 9px 12px;
+
+      border: 1px solid var(--border);
+
+      border-radius: 999px;
+
+      background: rgba(255,255,255,0.035);
+
+      color: var(--muted);
+
+      font-size: 11px;
+
+      cursor: pointer;
+
+      transition: 0.18s;
+    }
+
+    .quick:active {
+      transform: scale(0.96);
+    }
+
+    /* Bottom navigation */
+
+    .bottom-nav {
+      position: fixed;
+      z-index: 10;
+
+      left: 50%;
+      bottom: max(12px, env(safe-area-inset-bottom));
+
+      transform: translateX(-50%);
+
+      width: min(92vw, 420px);
+      height: 62px;
+
+      padding: 5px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+
+      border: 1px solid var(--border);
+
+      border-radius: 22px;
+
+      background: rgba(9, 13, 23, 0.8);
+
+      backdrop-filter: blur(25px);
+
+      box-shadow:
+        0 18px 55px rgba(0,0,0,0.4);
+    }
+
+    .nav-button {
+      width: 48px;
+      height: 48px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 16px;
+
+      background: transparent;
+
+      color: #68748b;
+
+      font-size: 19px;
+
+      cursor: pointer;
+
+      transition: 0.18s;
+    }
+
+    .nav-button.active,
+    .nav-button:active {
+      background: rgba(255,255,255,0.075);
+      color: white;
+    }
+
+    /* Panels */
+
+    .overlay {
+      position: fixed;
+      z-index: 20;
+
+      inset: 0;
+
+      display: none;
+      align-items: flex-end;
+
+      background: rgba(2,4,8,0.7);
+
+      backdrop-filter: blur(9px);
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .sheet {
+      width: 100%;
+      max-height: 84dvh;
+
+      overflow-y: auto;
+
+      padding:
+        15px
+        18px
+        calc(25px + env(safe-area-inset-bottom));
+
+      border-top:
+        1px solid var(--border);
+
+      border-radius:
+        28px
+        28px
+        0
+        0;
+
+      background: var(--panel-strong);
+
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(40px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 16px;
+    }
+
+    .sheet-header h2 {
+      font-size: 20px;
+    }
+
+    .close {
+      width: 40px;
+      height: 40px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 13px;
+
+      background: rgba(255,255,255,0.06);
+
+      cursor: pointer;
+    }
+
+    /* Chat */
+
+    .chat {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      min-height: 190px;
+      max-height: 48dvh;
+
+      overflow-y: auto;
+
+      padding: 3px;
+    }
+
+    .message {
+      max-width: 86%;
+
+      padding: 11px 13px;
+
+      border-radius: 17px;
+
+      font-size: 14px;
+      line-height: 1.45;
+
+      white-space: pre-wrap;
+
+      word-break: break-word;
+    }
+
+    .message.nova {
+      align-self: flex-start;
+
+      background: rgba(255,255,255,0.055);
+
+      border: 1px solid var(--border);
+    }
+
+    .message.user {
+      align-self: flex-end;
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(50,125,185,0.95),
+          rgba(91,77,166,0.95)
+        );
+    }
+
+    .composer {
+      display: flex;
+      gap: 8px;
+
+      margin-top: 12px;
+    }
+
+    .composer input {
+      min-width: 0;
+      flex: 1;
+
+      padding: 12px 14px;
+
+      color: var(--text);
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 15px;
+
+      outline: none;
+
+      background: rgba(255,255,255,0.05);
+    }
+
+    .composer input:focus {
+      border-color: rgba(99,200,255,0.35);
+    }
+
+    .send {
+      padding: 0 16px;
+
+      border-radius: 15px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #3d91d2,
+          #7064d8
+        );
+
+      cursor: pointer;
+    }
+
+    /* Settings */
+
+    .setting {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 20px;
+
+      padding: 15px 0;
+
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .setting small {
+      display: block;
+
+      margin-top: 4px;
+
+      color: var(--muted);
+
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .toggle {
+      width: 48px;
+      height: 28px;
+
+      padding: 3px;
+
+      border-radius: 20px;
+
+      background: #303747;
+
+      cursor: pointer;
+    }
+
+    .toggle span {
+      display: block;
+
+      width: 22px;
+      height: 22px;
+
+      border-radius: 50%;
+
+      background: white;
+
+      transition: transform 0.2s;
+    }
+
+    .toggle.on {
+      background: #397eb3;
+    }
+
+    .toggle.on span {
+      transform: translateX(20px);
+    }
+
+    .danger {
+      color: var(--red);
+
+      background: rgba(255,113,143,0.08);
+
+      border:
+        1px solid rgba(255,113,143,0.18);
+
+      border-radius: 12px;
+
+      padding: 9px 11px;
+
+      font-size: 11px;
+
+      cursor: pointer;
+    }
+
+    /* Toast */
+
+    .toast {
+      position: fixed;
+      z-index: 50;
+
+      left: 50%;
+      bottom: 91px;
+
+      transform:
+        translate(-50%, 15px);
+
+      opacity: 0;
+
+      pointer-events: none;
+
+      padding: 10px 14px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 13px;
+
+      background: #141b2a;
+
+      color: white;
+
+      font-size: 12px;
+
+      transition:
+        opacity 0.22s,
+        transform 0.22s;
+    }
+
+    .toast.show {
+      opacity: 1;
+
+      transform:
+        translate(-50%, 0);
+    }
+
+    /* Accessibility */
+
+    button:focus-visible,
+    input:focus-visible {
+      outline:
+        2px solid rgba(99,200,255,0.65);
+
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    @media (min-width: 700px) {
+      main {
+        padding-bottom: 120px;
+      }
+
+      .bottom-nav {
+        bottom: 25px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app" id="app">
+
+  <div class="grid"></div>
+  <div class="ambient"></div>
+
+  <header>
+    <div class="logo">NOVA</div>
+
+    <div class="online">
+      <span class="online-dot"></span>
+      <span>ONLINE</span>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="welcome">
+      <h1>Wie kann ich helfen?</h1>
+      <p>Dein persönlicher KI-Assistent</p>
+    </section>
+
+    <section
+      class="core-container"
+      id="coreContainer"
+      aria-label="NOVA Status"
+    >
+      <div class="core-ring"></div>
+      <div class="core-ring two"></div>
+      <div class="core-ring three"></div>
+
+      <div class="core"></div>
+    </section>
+
+    <div class="state" id="state">
+      Bereit
+    </div>
+
+    <section class="controls">
+
+      <button
+        class="mic"
+        id="micButton"
+        aria-label="NOVA Sprachsteuerung"
+        type="button"
+      >
+        🎙️
+      </button>
+
+      <div class="hint" id="hint">
+        Tippe auf das Mikrofon
+      </div>
+
+      <div class="quick-actions">
+
+        <button
+          class="quick"
+          type="button"
+          data-command="Was kannst du?"
+        >
+          Was kannst du?
+        </button>
+
+        <button
+          class="quick"
+          type="button"
+          data-command="Erkläre mir etwas"
+        >
+          Etwas erklären
+        </button>
+
+        <button
+          class="quick"
+          type="button"
+          data-command="Hilf mir planen"
+        >
+          Etwas planen
+        </button>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+
+    <button
+      class="nav-button active"
+      type="button"
+      data-page="home"
+      aria-label="Startseite"
+    >
+      ⌂
+    </button>
+
+    <button
+      class="nav-button"
+      type="button"
+      data-page="chat"
+      aria-label="Chat"
+    >
+      ◌
+    </button>
+
+    <button
+      class="nav-button"
+      type="button"
+      data-page="settings"
+      aria-label="Einstellungen"
+    >
+      ⚙
+    </button>
+
+  </nav>
+
+  <div
+    class="overlay"
+    id="overlay"
+    role="dialog"
+    aria-modal="true"
+  >
+
+    <div class="sheet">
+
+      <div class="sheet-header">
+
+        <h2 id="sheetTitle">
+          NOVA
+        </h2>
+
+        <button
+          class="close"
+          id="closeButton"
+          type="button"
+          aria-label="Schließen"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      <div id="sheetContent"></div>
+
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+"use strict";
+
+/*
+  NOVA 0.1
+  ----------
+  Foundation:
+  - Responsive mobile UI
+  - Animated AI core
+  - Local chat
+  - Browser speech recognition when supported
+  - Browser text-to-speech
+  - Local settings
+  - Local chat persistence
+  - Navigation
+  - Error handling
+
+  Noch NICHT enthalten:
+  - echte KI-API
+  - Cloud Memory
+  - Benutzerkonten
+  - Websuche
+  - PC-Steuerung
+
+  Diese Funktionen werden später sicher über ein Backend angebunden.
+*/
+
+const App = (() => {
+
+  const elements = {
+    app: document.getElementById("app"),
+    mic: document.getElementById("micButton"),
+    state: document.getElementById("state"),
+    hint: document.getElementById("hint"),
+
+    overlay: document.getElementById("overlay"),
+    sheetTitle: document.getElementById("sheetTitle"),
+    sheetContent: document.getElementById("sheetContent"),
+    close: document.getElementById("closeButton"),
+
+    toast: document.getElementById("toast")
+  };
+
+  const storageKeys = {
+    voice: "nova_voice_enabled",
+    chat: "nova_chat_history"
+  };
+
+  let recognition = null;
+  let listening = false;
+
+  let settings = {
+    voice:
+      localStorage.getItem(storageKeys.voice) !== "0"
+  };
+
+  function showToast(message) {
+
+    elements.toast.textContent = message;
+
+    elements.toast.classList.add("show");
+
+    clearTimeout(showToast.timeout);
+
+    showToast.timeout = setTimeout(() => {
+      elements.toast.classList.remove("show");
+    }, 2200);
+  }
+
+  function setState(mode, text) {
+
+    elements.app.classList.remove(
+      "listening",
+      "thinking"
+    );
+
+    if (mode === "listening") {
+      elements.app.classList.add("listening");
+    }
+
+    if (mode === "thinking") {
+      elements.app.classList.add("thinking");
+    }
+
+    elements.state.textContent = text;
+  }
+
+  function speak(text) {
+
+    if (!settings.voice) {
+      return;
+    }
+
+    if (!("speechSynthesis" in window)) {
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utterance =
+      new SpeechSynthesisUtterance(text);
+
+    utterance.lang = "de-DE";
+    utterance.rate = 0.98;
+    utterance.pitch = 1;
+
+    utterance.onstart = () => {
+      setState("thinking", "NOVA spricht…");
+    };
+
+    utterance.onend = () => {
+      setState("", "Bereit");
+    };
+
+    utterance.onerror = () => {
+      setState("", "Bereit");
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function loadChat() {
+
+    try {
+
+      const stored =
+        localStorage.getItem(storageKeys.chat);
+
+      if (!stored) {
+        return [];
+      }
+
+      const parsed = JSON.parse(stored);
+
+      return Array.isArray(parsed)
+        ? parsed
+        : [];
+
+    } catch {
+      return [];
+    }
+  }
+
+  function saveChat(messages) {
+
+    try {
+
+      localStorage.setItem(
+        storageKeys.chat,
+        JSON.stringify(messages.slice(-50))
+      );
+
+    } catch {
+      showToast("Chat konnte nicht gespeichert werden.");
+    }
+  }
+
+  function addMessage(type, text) {
+
+    const chat =
+      document.getElementById("novaChat");
+
+    if (!chat) {
+      return;
+    }
+
+    const message =
+      document.createElement("div");
+
+    message.className =
+      "message " + type;
+
+    message.textContent = text;
+
+    chat.appendChild(message);
+
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function addAndSaveMessage(type, text) {
+
+    const history = loadChat();
+
+    history.push({
+      type,
+      text,
+      timestamp: Date.now()
+    });
+
+    saveChat(history);
+
+    addMessage(type, text);
+  }
+
+  function getLocalResponse(text) {
+
+    const normalized =
+      text.toLowerCase().trim();
+
+    if (
+      normalized.includes("was kannst du") ||
+      normalized.includes("was kannst du?")
+    ) {
+
+      return (
+        "Ich bin NOVA. Meine Benutzeroberfläche, " +
+        "Sprachsteuerung, Chat und Einstellungen sind " +
+        "bereits vorbereitet. Als Nächstes bekommt " +
+        "NOVA eine echte KI-Anbindung, Memory, " +
+        "Websuche und Actions."
+      );
+    }
+
+    if (
+      normalized.includes("hallo") ||
+      normalized.includes("hi") ||
+      normalized.includes("hey")
+    ) {
+
+      return "Hallo. Ich bin NOVA. Wie kann ich dir helfen?";
+    }
+
+    if (normalized.includes("erklär")) {
+
+      return (
+        "Gerne. Sag mir einfach, welches Thema " +
+        "du erklärt haben möchtest."
+      );
+    }
+
+    if (
+      normalized.includes("plan") ||
+      normalized.includes("planung")
+    ) {
+
+      return (
+        "Natürlich. Sag mir dein Ziel, den Zeitraum " +
+        "und wichtige Bedingungen. Dann können wir " +
+        "gemeinsam einen Plan erstellen."
+      );
+    }
+
+    if (
+      normalized.includes("danke") ||
+      normalized.includes("dankeschön")
+    ) {
+
+      return "Sehr gerne.";
+    }
+
+    return (
+      "Ich habe deine Nachricht verstanden. " +
+      "Die echte KI wird in der nächsten NOVA-Version " +
+      "sicher über ein Backend verbunden."
+    );
+  }
+
+  function sendMessage(text) {
+
+    const clean =
+      String(text || "").trim();
+
+    if (!clean) {
+      return;
+    }
+
+    addAndSaveMessage(
+      "user",
+      clean
+    );
+
+    setState(
+      "thinking",
+      "NOVA denkt…"
+    );
+
+    setTimeout(() => {
+
+      const response =
+        getLocalResponse(clean);
+
+      addAndSaveMessage(
+        "nova",
+        response
+      );
+
+      setState(
+        "",
+        "Bereit"
+      );
+
+      speak(response);
+
+    }, 350);
+  }
+
+  function renderChat() {
+
+    const history =
+      loadChat();
+
+    elements.sheetTitle.textContent =
+      "NOVA Chat";
+
+    elements.sheetContent.innerHTML = `
+      <div class="chat" id="novaChat"></div>
+
+      <form class="composer" id="composer">
+
+        <input
+          id="chatInput"
+          type="text"
+          placeholder="Nachricht an NOVA…"
+          autocomplete="off"
+          maxlength="2000"
+          aria-label="Nachricht"
+        >
+
+        <button
+          class="send"
+          type="submit"
+        >
+          Senden
+        </button>
+
+      </form>
+    `;
+
+    const chat =
+      document.getElementById("novaChat");
+
+    history.forEach(message => {
+
+      const element =
+        document.createElement("div");
+
+      element.className =
+        "message " + (
+          message.type === "user"
+            ? "user"
+            : "nova"
+        );
+
+      element.textContent =
+        message.text;
+
+      chat.appendChild(element);
+
+    });
+
+    const composer =
+      document.getElementById("composer");
+
+    const input =
+      document.getElementById("chatInput");
+
+    composer.addEventListener(
+      "submit",
+      event => {
+
+        event.preventDefault();
+
+        sendMessage(input.value);
+
+        input.value = "";
+
+        input.focus();
+
+      }
+    );
+
+    requestAnimationFrame(() => {
+      chat.scrollTop = chat.scrollHeight;
+      input.focus();
+    });
+  }
+
+  function renderSettings() {
+
+    elements.sheetTitle.textContent =
+      "Einstellungen";
+
+    elements.sheetContent.innerHTML = `
+
+      <div class="setting">
+
+        <div>
+          <strong>Sprachausgabe</strong>
+
+          <small>
+            NOVA liest Antworten mit der Stimme
+            deines Geräts vor.
+          </small>
+        </div>
+
+        <button
+          class="toggle ${settings.voice ? "on" : ""}"
+          id="voiceToggle"
+          type="button"
+          aria-label="Sprachausgabe umschalten"
+        >
+          <span></span>
+        </button>
+
+      </div>
+
+      <div class="setting">
+
+        <div>
+          <strong>Lokaler Chat</strong>
+
+          <small>
+            Die aktuelle Foundation speichert
+            deinen Chat nur lokal in diesem Browser.
+          </small>
+        </div>
+
+        <button
+          class="danger"
+          id="clearChat"
+          type="button"
+        >
+          Löschen
+        </button>
+
+      </div>
+
+      <div class="setting">
+
+        <div>
+          <strong>NOVA Version</strong>
+
+          <small>
+            Foundation Release
+          </small>
+        </div>
+
+        <span
+          style="
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+          "
+        >
+          0.1
+        </span>
+
+      </div>
+
+    `;
+
+    document
+      .getElementById("voiceToggle")
+      .addEventListener(
+        "click",
+        () => {
+
+          settings.voice =
+            !settings.voice;
+
+          localStorage.setItem(
+            storageKeys.voice,
+            settings.voice ? "1" : "0"
+          );
+
+          renderSettings();
+
+          showToast(
+            settings.voice
+              ? "Sprachausgabe aktiviert"
+              : "Sprachausgabe deaktiviert"
+          );
+
+        }
+      );
+
+    document
+      .getElementById("clearChat")
+      .addEventListener(
+        "click",
+        () => {
+
+          const confirmed =
+            window.confirm(
+              "Möchtest du den lokalen NOVA-Chat wirklich löschen?"
+            );
+
+          if (!confirmed) {
+            return;
+          }
+
+          localStorage.removeItem(
+            storageKeys.chat
+          );
+
+          showToast(
+            "Chat gelöscht"
+          );
+
+          closePanel();
+
+        }
+      );
+  }
+
+  function openPanel(type) {
+
+    elements.overlay.classList.add("open");
+
+    if (type === "chat") {
+      renderChat();
+      return;
+    }
+
+    if (type === "settings") {
+      renderSettings();
+      return;
+    }
+  }
+
+  function closePanel() {
+
+    elements.overlay.classList.remove(
+      "open"
+    );
+  }
+
+  function createRecognition() {
+
+    const Recognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    if (!Recognition) {
+      return null;
+    }
+
+    const instance =
+      new Recognition();
+
+    instance.lang = "de-DE";
+
+    instance.continuous = false;
+    instance.interimResults = false;
+
+    instance.onstart = () => {
+
+      listening = true;
+
+      setState(
+        "listening",
+        "Ich höre zu…"
+      );
+
+      elements.hint.textContent =
+        "Sprich jetzt mit NOVA";
+
+    };
+
+    instance.onresult = event => {
+
+      const result =
+        event.results?.[0]?.[0];
+
+      const text =
+        result?.transcript?.trim();
+
+      listening = false;
+
+      setState(
+        "thinking",
+        "Verarbeite…"
+      );
+
+      elements.hint.textContent =
+        "Tippe auf das Mikrofon";
+
+      if (text) {
+
+        openPanel("chat");
+
+        setTimeout(() => {
+
+          const input =
+            document.getElementById(
+              "chatInput"
+            );
+
+          if (input) {
+            input.value = text;
+            sendMessage(text);
+            input.value = "";
+          }
+
+        }, 80);
+
+      }
+    };
+
+    instance.onerror = event => {
+
+      listening = false;
+
+      setState(
+        "",
+        "Bereit"
+      );
+
+      elements.hint.textContent =
+        "Tippe auf das Mikrofon";
+
+      if (
+        event.error ===
+        "not-allowed"
+      ) {
+
+        showToast(
+          "Mikrofonzugriff wurde verweigert."
+        );
+
+        return;
+      }
+
+      if (
+        event.error ===
+        "no-speech"
+      ) {
+
+        showToast(
+          "Ich habe nichts gehört."
+        );
+
+        return;
+      }
+
+      showToast(
+        "Spracherkennung konnte nicht gestartet werden."
+      );
+    };
+
+    instance.onend = () => {
+
+      listening = false;
+
+      setState(
+        "",
+        "Bereit"
+      );
+
+      elements.hint.textContent =
+        "Tippe auf das Mikrofon";
+    };
+
+    return instance;
+  }
+
+  function toggleVoiceRecognition() {
+
+    if (listening && recognition) {
+
+      recognition.stop();
+
+      return;
+    }
+
+    if (
+      !window.isSecureContext &&
+      location.hostname !== "localhost"
+    ) {
+
+      showToast(
+        "Sprachzugriff benötigt eine sichere Verbindung (HTTPS)."
+      );
+
+      return;
+    }
+
+    recognition =
+      createRecognition();
+
+    if (!recognition) {
+
+      showToast(
+        "Dieser Browser unterstützt keine Spracherkennung."
+      );
+
+      return;
+    }
+
+    try {
+
+      recognition.start();
+
+    } catch {
+
+      recognition = null;
+
+      showToast(
+        "Mikrofon konnte nicht gestartet werden."
+      );
+
+    }
+  }
+
+  function handleNavigation(page) {
+
+    document
+      .querySelectorAll(".nav-button")
+      .forEach(button => {
+
+        button.classList.toggle(
+          "active",
+          button.dataset.page === page
+        );
+
+      });
+
+    if (page === "home") {
+
+      closePanel();
+
+      setState(
+        "",
+        "Bereit"
+      );
+
+      return;
+    }
+
+    if (page === "chat") {
+
+      openPanel("chat");
+
+      return;
+    }
+
+    if (page === "settings") {
+
+      openPanel("settings");
+
+      return;
+    }
+  }
+
+  function bindEvents() {
+
+    elements.mic.addEventListener(
+      "click",
+      toggleVoiceRecognition
+    );
+
+    elements.close.addEventListener(
+      "click",
+      closePanel
+    );
+
+    elements.overlay.addEventListener(
+      "click",
+      event => {
+
+        if (
+          event.target ===
+          elements.overlay
+        ) {
+          closePanel();
+        }
+
+      }
+    );
+
+    document
+      .querySelectorAll("[data-page]")
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            handleNavigation(
+              button.dataset.page
+            );
+
+          }
+        );
+
+      });
+
+    document
+      .querySelectorAll("[data-command]")
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            const command =
+              button.dataset.command;
+
+            openPanel("chat");
+
+            setTimeout(() => {
+
+              const input =
+                document.getElementById(
+                  "chatInput"
+                );
+
+              if (input) {
+
+                input.value =
+                  command;
+
+                sendMessage(command);
+
+                input.value = "";
+
+              }
+
+            }, 80);
+
+          }
+        );
+
+      });
+
+    document.addEventListener(
+      "keydown",
+      event => {
+
+        if (
+          event.key ===
+          "Escape"
+        ) {
+          closePanel();
+        }
+
+      }
+    );
+  }
+
+  function init() {
+
+    bindEvents();
+
+    setState(
+      "",
+      "Bereit"
+    );
+  }
+
+  return {
+    init
+  };
+
+})();
+
+App.init();
+</script>
+
+</body>
+</html>
