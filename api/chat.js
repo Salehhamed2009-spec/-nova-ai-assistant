@@ -6,11 +6,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const token = process.env.HF_TOKEN;
 
-    if (!apiKey) {
+    if (!token) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY ist auf dem Server nicht eingerichtet."
+        error: "HF_TOKEN ist in Vercel nicht eingerichtet."
       });
     }
 
@@ -36,27 +36,38 @@ export default async function handler(req, res) {
       });
     }
 
-    const history =
-      Array.isArray(body.history)
-        ? body.history
-            .slice(-20)
-            .filter(
-              item =>
-                item &&
-                typeof item.text === "string" &&
-                (item.role === "user" ||
-                 item.role === "nova")
-            )
-            .map(item => ({
-              role:
-                item.role === "nova"
-                  ? "assistant"
-                  : "user",
-              content: item.text.slice(0, 4000)
-            }))
-        : [];
+    const history = Array.isArray(body.history)
+      ? body.history
+          .slice(-20)
+          .filter(
+            item =>
+              item &&
+              typeof item.text === "string" &&
+              (item.role === "user" ||
+                item.role === "nova")
+          )
+          .map(item => ({
+            role:
+              item.role === "nova"
+                ? "assistant"
+                : "user",
+            content: item.text.slice(0, 4000)
+          }))
+      : [];
 
-    const input = [
+    const messages = [
+      {
+        role: "system",
+        content:
+          "Du bist NOVA, ein moderner persönlicher KI-Assistent. " +
+          "Antworte standardmäßig auf Deutsch, wenn der Benutzer Deutsch schreibt. " +
+          "Sei intelligent, freundlich, natürlich und präzise. " +
+          "Antworte nicht unnötig lang. " +
+          "Wenn du etwas nicht weißt, sag ehrlich, dass du es nicht weißt. " +
+          "Behaupte niemals, eine Aktion auf dem Gerät des Benutzers durchgeführt zu haben, " +
+          "wenn du dafür keine echte technische Funktion besitzt. " +
+          "Du bist die KI innerhalb der NOVA-App."
+      },
       ...history,
       {
         role: "user",
@@ -64,95 +75,69 @@ export default async function handler(req, res) {
       }
     ];
 
-    const openAIResponse = await fetch(
-      "https://api.openai.com/v1/responses",
+    const response = await fetch(
+      "https://router.huggingface.co/v1/chat/completions",
       {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          "Authorization": `Bearer ${token}`
         },
+
         body: JSON.stringify({
-          model: "gpt-5-mini",
-          instructions:
-            "Du bist NOVA, ein moderner persönlicher KI-Assistent. " +
-            "Antworte auf Deutsch, wenn der Benutzer Deutsch schreibt. " +
-            "Sei hilfreich, natürlich, präzise und freundlich. " +
-            "Behaupte niemals, eine Funktion ausgeführt zu haben, wenn du sie nicht tatsächlich ausführen kannst. " +
-            "Du hast in dieser Version keinen direkten Zugriff auf das Gerät, lokale Dateien, Apps oder das Internet.",
-          input,
-          max_output_tokens: 1200
+          model: "openai/gpt-oss-120b",
+          messages,
+          max_tokens: 1200,
+          temperature: 0.7
         })
       }
     );
 
-    const data = await openAIResponse.json();
+    const data = await response.json();
 
-    if (!openAIResponse.ok) {
-      console.error("OpenAI API error:", data);
+    if (!response.ok) {
+      console.error("Hugging Face API error:", data);
 
-      return res.status(
-        openAIResponse.status >= 400 &&
-        openAIResponse.status < 500
-          ? 400
-          : 502
-      ).json({
+      return res.status(502).json({
         error:
           data?.error?.message ||
-          "Die KI konnte die Anfrage nicht verarbeiten."
+          "Die NOVA-KI konnte momentan nicht antworten."
       });
     }
 
     const answer =
-      typeof data.output_text === "string"
-        ? data.output_text.trim()
-        : extractResponseText(data);
+      data?.choices?.[0]?.message?.content;
 
-    if (!answer) {
+    if (
+      typeof answer !== "string" ||
+      !answer.trim()
+    ) {
+      console.error(
+        "Unexpected Hugging Face response:",
+        data
+      );
+
       return res.status(502).json({
-        error: "Die KI hat keine Textantwort zurückgegeben."
+        error:
+          "Die KI hat keine gültige Antwort zurückgegeben."
       });
     }
 
     return res.status(200).json({
-      answer
+      answer: answer.trim()
     });
 
   } catch (error) {
 
-    console.error("NOVA backend error:", error);
+    console.error(
+      "NOVA backend error:",
+      error
+    );
 
     return res.status(500).json({
       error:
         "Interner NOVA-Fehler. Bitte versuche es erneut."
     });
   }
-}
-
-function extractResponseText(data) {
-
-  if (!Array.isArray(data?.output)) {
-    return "";
-  }
-
-  let result = "";
-
-  for (const item of data.output) {
-
-    if (!Array.isArray(item?.content)) {
-      continue;
-    }
-
-    for (const content of item.content) {
-
-      if (
-        content?.type === "output_text" &&
-        typeof content.text === "string"
-      ) {
-        result += content.text;
-      }
-    }
-  }
-
-  return result.trim();
 }
