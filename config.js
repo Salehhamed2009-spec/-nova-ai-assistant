@@ -14,6 +14,11 @@ const CONFIG = {
   MEMORY_SETTINGS: {
     ENABLED: true,
     MAX_MEMORIES: 100
+  },
+
+  APP: {
+    NAME: 'NOVA',
+    VERSION: '1.0.0'
   }
 };
 
