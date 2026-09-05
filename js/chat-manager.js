@@ -1,3 +1,8 @@
+/**
+ * NOVA Chat Manager
+ * Zentrale Verwaltung aller Chats
+ */
+
 import storage from './storage-manager.js';
 
 class ChatManager {
@@ -7,31 +12,33 @@ class ChatManager {
   }
 
   loadCurrentChat() {
-    this.currentChatId = storage.getCurrentChat();
+    const savedId = storage.getCurrentChat();
+    const chats = storage.getChats();
 
-    if (!this.currentChatId) {
-      const chats = storage.getChats();
-
-      if (chats.length > 0) {
-        this.currentChatId = chats[0].id;
-        storage.setCurrentChat(this.currentChatId);
-      } else {
-        this.createNewChat();
-      }
+    if (savedId && chats.some(chat => chat.id === savedId)) {
+      this.currentChatId = savedId;
+      return storage.getChat(savedId);
     }
+
+    if (chats.length > 0) {
+      this.currentChatId = chats[0].id;
+      storage.setCurrentChat(this.currentChatId);
+      return chats[0];
+    }
+
+    return this.createNewChat();
   }
 
   createNewChat(title = 'Neuer Chat') {
     const chat = storage.createChat(title);
-
     this.currentChatId = chat.id;
-
+    storage.setCurrentChat(chat.id);
     return chat;
   }
 
   getCurrentChat() {
     if (!this.currentChatId) {
-      this.loadCurrentChat();
+      return this.loadCurrentChat();
     }
 
     return storage.getChat(this.currentChatId);
@@ -55,7 +62,10 @@ class ChatManager {
   }
 
   addMessage(role, content) {
-    if (!content || !content.trim()) {
+    if (
+      typeof content !== 'string' ||
+      !content.trim()
+    ) {
       return false;
     }
 
@@ -65,28 +75,20 @@ class ChatManager {
       chat = this.createNewChat();
     }
 
-    const message = {
+    return storage.addMessage(chat.id, {
       role,
-      content: content.trim(),
-      timestamp: Date.now()
-    };
-
-    return storage.addMessage(
-      chat.id,
-      message
-    );
+      content: content.trim()
+    });
   }
 
   getMessages() {
     const chat = this.getCurrentChat();
 
-    if (!chat) {
+    if (!chat || !Array.isArray(chat.messages)) {
       return [];
     }
 
-    return Array.isArray(chat.messages)
-      ? chat.messages
-      : [];
+    return chat.messages;
   }
 
   getChatHistory() {
@@ -98,26 +100,33 @@ class ChatManager {
   }
 
   renameChat(chatId, title) {
-    if (!title || !title.trim()) {
+    if (
+      typeof title !== 'string' ||
+      !title.trim()
+    ) {
       return false;
     }
 
-    return storage.updateChat(
-      chatId,
-      {
-        title: title.trim()
-      }
-    );
+    return storage.updateChat(chatId, {
+      title: title.trim()
+    });
   }
 
   deleteChat(chatId) {
-    const result =
-      storage.deleteChat(chatId);
+    const result = storage.deleteChat(chatId);
 
-    if (
-      chatId === this.currentChatId
-    ) {
-      this.loadCurrentChat();
+    if (chatId !== this.currentChatId) {
+      return result;
+    }
+
+    const chats = storage.getChats();
+
+    if (chats.length > 0) {
+      this.currentChatId = chats[0].id;
+      storage.setCurrentChat(this.currentChatId);
+    } else {
+      const newChat = this.createNewChat();
+      this.currentChatId = newChat.id;
     }
 
     return result;
@@ -130,48 +139,55 @@ class ChatManager {
       return false;
     }
 
-    return storage.updateChat(
-      chat.id,
-      {
-        messages: [],
-        updated: Date.now()
-      }
-    );
+    return storage.updateChat(chat.id, {
+      messages: []
+    });
+  }
+
+  clearAllChats() {
+    storage.clearAllChats();
+
+    const newChat = this.createNewChat();
+
+    this.currentChatId = newChat.id;
+
+    return true;
   }
 
   searchChats(query) {
-    if (!query || !query.trim()) {
+    if (
+      typeof query !== 'string' ||
+      !query.trim()
+    ) {
       return this.getAllChats();
     }
 
-    const search =
-      query
-        .toLowerCase()
-        .trim();
+    const search = query
+      .toLowerCase()
+      .trim();
 
-    return this.getAllChats()
-      .filter(chat => {
+    return this.getAllChats().filter(chat => {
+      const titleMatch =
+        typeof chat.title === 'string' &&
+        chat.title
+          .toLowerCase()
+          .includes(search);
 
-        if (
-          chat.title
-            ?.toLowerCase()
+      const messageMatch =
+        Array.isArray(chat.messages) &&
+        chat.messages.some(message =>
+          typeof message.content === 'string' &&
+          message.content
+            .toLowerCase()
             .includes(search)
-        ) {
-          return true;
-        }
-
-        return chat.messages?.some(
-          message =>
-            message.content
-              ?.toLowerCase()
-              .includes(search)
         );
-      });
+
+      return titleMatch || messageMatch;
+    });
   }
 }
 
-const chatManager =
-  new ChatManager();
+const chatManager = new ChatManager();
 
 export default chatManager;
 export { ChatManager };
