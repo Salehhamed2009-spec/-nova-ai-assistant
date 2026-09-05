@@ -691,10 +691,14 @@ const NOVA = (() => {
   const toast = $("toast");
 
   const STORAGE = {
-    chat: "nova_chat_history_v10",
-    voice: "nova_voice_enabled_v10",
-    memory: "nova_memory_v10"
-  };
+  chats: "nova_chats_v11",
+  currentChat: "nova_current_chat_v11",
+  voice: "nova_voice_enabled_v10",
+  memory: "nova_memory_v10"
+};
+
+let currentChatId =
+  localStorage.getItem(STORAGE.currentChat) || null;
 
   let recognition = null;
   let listening = false;
