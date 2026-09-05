@@ -1,0 +1,21 @@
+{
+  "name": "nova-ai-assistant",
+  "version": "2.0.0",
+  "description": "NOVA – persönlicher KI-Assistent mit Chat, langfristigem Memory und futuristischer Mobile-Oberfläche",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "echo \"NOVA build ready\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@octokit/rest": "^22.0.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "cors": "^2.8.5"
+  }
+}
