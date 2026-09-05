@@ -1,0 +1,333 @@
+(() => {
+  'use strict';
+
+  // Dom Elements
+  const app = document.getElementById('novaApp') || document.body;
+  const canvas = document.getElementById('coreCanvas');
+  const ctx = canvas?.getContext('2d', { alpha: true });
+  const coreButton = document.getElementById('coreButton') || document.getElementById('micToggleBtn');
+  const coreStatus = document.getElementById('coreStatus');
+  const coreInstruction = document.getElementById('coreInstruction');
+  const messageInput = document.getElementById('messageInput');
+  const sendButton = document.getElementById('sendButton') || document.getElementById('sendBtn');
+  const voiceButton = document.getElementById('voiceButton') || document.getElementById('voiceModeBtn');
+  const textButton = document.getElementById('textModeBtn');
+  const drawer = document.getElementById('chatDrawer') || document.getElementById('textComposer');
+  const chatOverlay = document.getElementById('chatOverlay');
+
+  // Capabilities
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voiceAvailable = !!SpeechRecognition;
+
+  // App State
+  let initialized = false;
+  let currentState = navigator.onLine ? 'idle' : 'offline';
+  let width = 1, height = 1;
+  let recognition = null;
+  let isListening = false;
+  let isTextMode = false;
+
+  // Settings
+  const language = localStorage.getItem('nova_language') || 'de-DE';
+  const speechRate = Number(localStorage.getItem('nova_speech_rate') || '1');
+
+  // --- 1. STATE & UI MANAGEMENT ---
+  function setCoreState(state) {
+    currentState = state || 'idle';
+    const labels = {
+      idle: 'READY',
+      listening: 'LISTENING',
+      thinking: 'PROCESSING',
+      speaking: 'SPEAKING',
+      error: 'ERROR',
+      offline: 'OFFLINE'
+    };
+
+    if (coreStatus) coreStatus.textContent = labels[currentState] || labels.idle;
+    if (coreInstruction) {
+      if (currentState === 'listening') coreInstruction.textContent = 'NOVA hört zu…';
+      else if (currentState === 'thinking') coreInstruction.textContent = 'NOVA verarbeitet…';
+      else if (currentState === 'speaking') coreInstruction.textContent = 'NOVA spricht…';
+      else if (!initialized) coreInstruction.textContent = 'Tippen zum Starten';
+      else coreInstruction.textContent = isTextMode ? 'Tastatur aktiv' : 'Sprechen oder Modus wechseln';
+    }
+
+    document.body.classList.toggle('nova-thinking', currentState === 'thinking');
+  }
+
+  function appendChatMessage(text, sender) {
+    if (!chatOverlay) return;
+    const msg = document.createElement('div');
+    msg.className = `msg ${sender}`;
+    msg.style.cssText = `
+      padding: 10px 14px; border-radius: 14px; font-size: 14px; margin-bottom: 8px;
+      max-width: 85%; ${sender === 'user' ? 'align-self: flex-end; background: rgba(255,145,50,0.2); color:#fff;' : 'align-self: flex-start; background: rgba(18,9,4,0.7); color:#f4e9da;'}
+    `;
+    msg.textContent = text;
+    chatOverlay.appendChild(msg);
+    chatOverlay.scrollTop = chatOverlay.scrollHeight;
+  }
+
+  // --- 2. SPEECH ENGINE (AUDIO & RECOGNITION) ---
+  function initSpeechEngine() {
+    if (!voiceAvailable) return null;
+    const rec = new SpeechRecognition();
+    rec.lang = language;
+    rec.continuous = false;
+    rec.interimResults = true;
+
+    rec.onstart = () => {
+      isListening = true;
+      voiceButton?.classList.add('active');
+      setCoreState('listening');
+    };
+
+    rec.onresult = (event) => {
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += transcript;
+        else interim += transcript;
+      }
+
+      if (coreInstruction) coreInstruction.textContent = interim || final || 'Höre zu…';
+
+      if (final.trim()) {
+        dispatchMessage(final.trim(), 'voice');
+      }
+    };
+
+    rec.onerror = (e) => {
+      isListening = false;
+      voiceButton?.classList.remove('active');
+      if (e.error !== 'no-speech') setCoreState('idle');
+    };
+
+    rec.onend = () => {
+      isListening = false;
+      voiceButton?.classList.remove('active');
+      if (currentState === 'listening') setCoreState('idle');
+    };
+
+    return rec;
+  }
+
+  function startListening() {
+    if (!initialized) unlockAudioAndStart();
+    if (!voiceAvailable) {
+      setCoreState('error');
+      return;
+    }
+    if (isListening) return;
+
+    if (!recognition) recognition = initSpeechEngine();
+
+    try {
+      recognition.start();
+    } catch (e) {
+      // Fallback bei Übergangszuständen
+      recognition.stop();
+      setTimeout(() => { try { recognition.start(); } catch(err){} }, 150);
+    }
+  }
+
+  function stopListening() {
+    isListening = false;
+    voiceButton?.classList.remove('active');
+    if (recognition) {
+      try { recognition.stop(); } catch(e) {}
+    }
+    if (currentState === 'listening') setCoreState('idle');
+  }
+
+  function speak(text) {
+    if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel(); // Vorherige Sprache stoppen
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language;
+    utterance.rate = speechRate;
+    utterance.onstart = () => setCoreState('speaking');
+    utterance.onend = () => setCoreState('idle');
+    utterance.onerror = () => setCoreState('idle');
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // --- 3. BROWSER AUTOPLAY UNLOCK (Garantierter Start) ---
+  function unlockAudioAndStart() {
+    if (initialized) return;
+    initialized = true;
+
+    // AudioContext/Synthesizer freischalten durch User-Gesture
+    if ('speechSynthesis' in window) {
+      const silent = new SpeechSynthesisUtterance('');
+      window.speechSynthesis.speak(silent);
+    }
+
+    app?.classList.add('active');
+    if (messageInput) messageInput.disabled = false;
+    if (sendButton) sendButton.disabled = false;
+
+    // Sprachmodus direkt aktivieren
+    switchToVoiceMode();
+  }
+
+  // --- 4. DISPATCHER & BACKEND FALLBACK ---
+  function dispatchMessage(text, source) {
+    appendChatMessage(text, 'user');
+    setCoreState('thinking');
+
+    // Event für externes Backend feuern
+    const event = new CustomEvent('nova:send', { 
+      detail: { message: text, source: source },
+      cancelable: true 
+    });
+    const handledExternally = !document.dispatchEvent(event);
+
+    // Fallback: Wenn KEIN externes Backend geantwortet hat, selbst antworten
+    if (!handledExternally) {
+      setTimeout(() => {
+        const reply = "Ich habe deine Nachricht empfangen: " + text;
+        appendChatMessage(reply, 'nova');
+        speak(reply);
+      }, 800);
+    }
+  }
+
+  // --- 5. MODES & EVENT LISTENERS ---
+  function switchToVoiceMode() {
+    isTextMode = false;
+    drawer?.classList.remove('open');
+    textButton?.classList.remove('active');
+    voiceButton?.classList.add('active');
+    startListening();
+  }
+
+  function switchToTextMode() {
+    isTextMode = true;
+    stopListening();
+    drawer?.classList.add('open');
+    textButton?.classList.add('active');
+    voiceButton?.classList.remove('active');
+    setCoreState('idle');
+    setTimeout(() => messageInput?.focus(), 100);
+  }
+
+  function handleSendText() {
+    const text = messageInput?.value?.trim();
+    if (!text) return;
+    messageInput.value = '';
+    dispatchMessage(text, 'text');
+  }
+
+  // Binding Events
+  coreButton?.addEventListener('click', () => {
+    if (!initialized) {
+      unlockAudioAndStart();
+    } else if (isListening) {
+      stopListening();
+    } else {
+      switchToVoiceMode();
+    }
+  });
+
+  voiceButton?.addEventListener('click', switchToVoiceMode);
+  textButton?.addEventListener('click', switchToTextMode);
+  sendButton?.addEventListener('click', handleSendText);
+
+  messageInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendText();
+    }
+  });
+
+  // Global First Click Unlocker
+  window.addEventListener('click', unlockAudioAndStart, { once: true });
+  window.addEventListener('touchstart', unlockAudioAndStart, { once: true });
+
+  // --- 6. CANVAS RENDERER (VERSCHÖNERT & PERFORMANCE-OPTIMIERT) ---
+  function resizeCanvas() {
+    if (!canvas || !ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = Math.max(1, rect.width || window.innerWidth);
+    height = Math.max(1, rect.height || window.innerHeight);
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  if (canvas) {
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+  }
+
+  const particles = Array.from({ length: window.innerWidth < 600 ? 100 : 180 }, () => ({
+    theta: Math.random() * Math.PI * 2,
+    phi: Math.acos(Math.random() * 2 - 1),
+    radius: 50 + Math.random() * 65,
+    speed: 0.0003 + Math.random() * 0.0005,
+    size: 0.6 + Math.random() * 1.4,
+    alpha: 0.2 + Math.random() * 0.8
+  }));
+
+  function drawRing(cx, cy, r, rot, alpha, lw) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r, r * 0.4, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,145,45,${alpha})`;
+    ctx.lineWidth = lw;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function render(timestamp) {
+    if (!ctx || !canvas) return;
+    const time = timestamp * 0.001;
+    const cx = width / 2;
+    const cy = height * 0.5;
+    const base = Math.min(width, height) * 0.28;
+
+    ctx.clearRect(0, 0, width, height);
+
+    let intensity = currentState === 'thinking' ? 1.5 : currentState === 'listening' ? 1.2 : 0.7;
+    let speed = currentState === 'thinking' ? 1.4 : 0.4;
+
+    // Glow
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, base * 2);
+    glow.addColorStop(0, `rgba(255, 140, 40, ${0.12 * intensity})`);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+
+    // Rings
+    drawRing(cx, cy, base * 1.3, time * 0.2 * speed, 0.25 * intensity, 1);
+    drawRing(cx, cy, base * 0.9, -time * 0.4 * speed, 0.45 * intensity, 1.2);
+
+    // 3D Particles
+    particles.forEach(p => {
+      const theta = p.theta + time * p.speed * 1000 * speed;
+      const x = p.radius * Math.sin(p.phi) * Math.cos(theta);
+      const y = p.radius * Math.cos(p.phi);
+      const z = p.radius * Math.sin(p.phi) * Math.sin(theta);
+
+      const scale = 350 / (350 + z);
+      const px = cx + x * scale;
+      const py = cy + y * scale;
+
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(255, 160, 50, ${p.alpha * intensity})`;
+      ctx.arc(px, py, Math.max(0.3, p.size * scale), 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    requestAnimationFrame(render);
+  }
+
+  requestAnimationFrame(render);
+  setCoreState('idle');
+
+})();
