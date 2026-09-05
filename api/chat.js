@@ -1,8 +1,8 @@
+// api/chat.js
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Method Not Allowed"
-    });
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
   try {
@@ -43,17 +43,27 @@ export default async function handler(req, res) {
             item =>
               item &&
               typeof item.text === "string" &&
-              (item.role === "user" ||
-                item.role === "nova")
+              (item.role === "user" || item.role === "nova")
           )
           .map(item => ({
-            role:
-              item.role === "nova"
-                ? "assistant"
-                : "user",
+            role: item.role === "nova" ? "assistant" : "user",
             content: item.text.slice(0, 4000)
           }))
       : [];
+
+    const memories = Array.isArray(body.memories)
+      ? body.memories
+          .filter(item => typeof item === "string")
+          .map(item => item.trim())
+          .filter(Boolean)
+          .slice(0, 100)
+      : [];
+
+    const memoryContext = memories.length
+      ? `\n\nWICHTIGE ERINNERUNGEN ÜBER DEN BENUTZER:\n${memories
+          .map((memory, index) => `${index + 1}. ${memory}`)
+          .join("\n")}\n\nNutze diese Informationen nur, wenn sie für die aktuelle Unterhaltung relevant sind.`
+      : "";
 
     const messages = [
       {
@@ -66,7 +76,8 @@ export default async function handler(req, res) {
           "Wenn du etwas nicht weißt, sag ehrlich, dass du es nicht weißt. " +
           "Behaupte niemals, eine Aktion auf dem Gerät des Benutzers durchgeführt zu haben, " +
           "wenn du dafür keine echte technische Funktion besitzt. " +
-          "Du bist die KI innerhalb der NOVA-App."
+          "Du bist die KI innerhalb der NOVA-App." +
+          memoryContext
       },
       ...history,
       {
@@ -79,12 +90,10 @@ export default async function handler(req, res) {
       "https://router.huggingface.co/v1/chat/completions",
       {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         },
-
         body: JSON.stringify({
           model: "openai/gpt-oss-120b",
           messages,
@@ -106,38 +115,22 @@ export default async function handler(req, res) {
       });
     }
 
-    const answer =
-      data?.choices?.[0]?.message?.content;
+    const answer = data?.choices?.[0]?.message?.content;
 
-    if (
-      typeof answer !== "string" ||
-      !answer.trim()
-    ) {
-      console.error(
-        "Unexpected Hugging Face response:",
-        data
-      );
-
+    if (typeof answer !== "string" || !answer.trim()) {
       return res.status(502).json({
-        error:
-          "Die KI hat keine gültige Antwort zurückgegeben."
+        error: "Die KI hat keine gültige Antwort zurückgegeben."
       });
     }
 
     return res.status(200).json({
       answer: answer.trim()
     });
-
   } catch (error) {
-
-    console.error(
-      "NOVA backend error:",
-      error
-    );
+    console.error("NOVA backend error:", error);
 
     return res.status(500).json({
-      error:
-        "Interner NOVA-Fehler. Bitte versuche es erneut."
+      error: "Interner NOVA-Fehler. Bitte versuche es erneut."
     });
   }
 }
