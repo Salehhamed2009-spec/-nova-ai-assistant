@@ -1,10 +1,17 @@
 {
   "name": "nova-ai-assistant",
-  "version": "2.1.0",
-  "description": "NOVA - persönlicher KI-Assistent mit Chat und Memory",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
+  "description": "NOVA - persönlicher KI-Assistent mit Claude Agent SDK",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "latest"
+  },
+  "scripts": {
+    "start": "vercel dev",
+    "dev": "vercel dev"
   }
 }
