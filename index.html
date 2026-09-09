@@ -1766,6 +1766,90 @@
         scroll-behavior: auto !important;
       }
     }
+
+
+    /* =========================================================
+       AGENT MODE
+    ========================================================== */
+
+    .agent-bar {
+      width: min(100%, 760px);
+      margin: 0 auto 8px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid rgba(255, 156, 81, .13);
+      border-radius: 14px;
+      background: rgba(16, 10, 6, .72);
+      box-shadow: 0 8px 24px rgba(0,0,0,.18);
+      backdrop-filter: blur(14px);
+    }
+
+    .agent-bar-label {
+      color: rgba(255, 194, 133, .46);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      white-space: nowrap;
+    }
+
+    .agent-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .agent-orb {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #ff963b;
+      box-shadow: 0 0 12px rgba(255, 137, 43, .85);
+    }
+
+    #agentSelect {
+      width: 100%;
+      min-width: 0;
+      color: #ffe1bc;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: .02em;
+    }
+
+    #agentSelect option {
+      color: #211208;
+      background: #f6dfc2;
+    }
+
+    .agent-hint {
+      color: rgba(255, 204, 158, .42);
+      font-size: 9px;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 560px) {
+      .agent-bar {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 5px 8px;
+      }
+
+      .agent-select-wrap {
+        flex-basis: calc(100% - 100px);
+      }
+
+      .agent-hint {
+        width: 100%;
+        padding-left: 17px;
+      }
+    }
   </style>
 </head>
 
@@ -1944,6 +2028,18 @@
     ======================================================== -->
 
     <div class="composer-wrap">
+
+      <div class="agent-bar" aria-label="Aktiven Nova-Agenten auswählen">
+        <div class="agent-bar-label">AGENTENMODUS</div>
+        <label class="agent-select-wrap" for="agentSelect">
+          <span class="agent-orb" aria-hidden="true"></span>
+          <select id="agentSelect" aria-label="Aktiven Agenten auswählen">
+            <option value="nova">NOVA · Allgemeiner Assistent</option>
+            <option value="lyra">LYRA · Planung &amp; Umsetzung</option>
+          </select>
+        </label>
+        <span class="agent-hint" id="agentHint">klar, ruhig, vielseitig</span>
+      </div>
 
       <div
         class="locked-message"

@@ -59,6 +59,15 @@ class NovaApp {
       });
     }
 
+    const agentSelect = document.getElementById('agentSelect');
+    const agentHint = document.getElementById('agentHint');
+    if (agentSelect) {
+      agentSelect.addEventListener('change', () => {
+        const hints = { nova: 'klar, ruhig, vielseitig', lyra: 'plant, strukturiert, bringt Dinge ins Ziel' };
+        if (agentHint) agentHint.textContent = hints[agentSelect.value] || hints.nova;
+      });
+    }
+
     document.addEventListener(
       'nova:new-chat',
       () => this.createNewChat()
@@ -175,11 +184,14 @@ class NovaApp {
       const memories =
         memoryDetector.getMemoryTexts();
 
+      const agent = document.getElementById('agentSelect')?.value || 'nova';
+
       const response =
         await apiClient.sendMessage({
           message,
           history,
-          memories
+          memories,
+          agent
         });
 
       this.hideTyping();

@@ -17,7 +17,8 @@ class ApiClient {
   async sendMessage({
     message,
     history = [],
-    memories = []
+    memories = [],
+    agent = 'nova'
   }) {
     if (
       typeof message !== 'string' ||
@@ -51,7 +52,8 @@ class ApiClient {
               : [],
             memories: Array.isArray(memories)
               ? memories
-              : []
+              : [],
+            agent: typeof agent === 'string' ? agent : 'nova'
           }),
 
           signal: controller.signal
